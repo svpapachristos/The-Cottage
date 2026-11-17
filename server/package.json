@@ -1,0 +1,16 @@
+{
+  "name": "the-cottage",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Sophia's Cottage: a self-hosted home base for plans and thoughts, with Munin the raven. Cloudflare Worker + D1 (SQL) + Workers AI + a Claude connector (MCP).",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy"
+  },
+  "dependencies": {
+    "@cloudflare/workers-oauth-provider": "^1.2.4"
+  },
+  "devDependencies": {
+    "wrangler": "^4.45.0"
+  }
+}
