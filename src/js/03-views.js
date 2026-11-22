@@ -194,6 +194,8 @@ function pagesHTML(docs, ctx) {
 }
 function pageCard(d) { return `<div class="pagecard" data-go="${esc(hashFor.doc(d.id))}"><div class="n">${d.pinned ? '<span class="pin">&#9733;</span> ' : ""}${esc(d.title)}${isNew(d) ? `<span class="tag new">new</span>` : ""}</div><div class="s">${esc(snip(d.body, 160))}</div><div class="w">${childPages(d).length ? `<b class="inn">${childPages(d).length} ${childPages(d).length === 1 ? "page" : "pages"} inside</b> · ` : ""}${(d.history || []).length ? (d.history.length + 1) + " versions · " : ""}updated ${fmtDate(d.updated || d.created)}</div></div>`; }
 const byPage = (a, b) => (b.pinned ? 1 : 0) - (a.pinned ? 1 : 0) || byNew(a, b);
+// Pages inside a page (chapters) read in order: an explicit order number first, then the order they were written.
+const byChapter = (a, b) => (a.order ?? 1e9) - (b.order ?? 1e9) || (a.created || 0) - (b.created || 0);
 
 // ============================================================ a room
 function vRoom(area) {
@@ -310,7 +312,7 @@ const tieChip = pid => r => {
 function vDoc(id) {
   const d = S.items[id], p = projOf(d), area = roomOf(d), R = ROOMS[area];
   const parts = [[R.name, hashFor.room(area)]]; if (p) parts.push([p.name, hashFor.p(p.id)]); for (const up of parentsOf(d)) parts.push([up.title, hashFor.doc(up.id)]); parts.push([d.title]);
-  const kids = childPages(d).sort(byPage);
+  const kids = childPages(d).sort(byChapter);
   const v = S.docVersion && S.docVersion.id === id ? S.docVersion.n : -1, shown = v >= 0 && d.history && d.history[v] ? d.history[v] : null;
   $("view").innerHTML = `<div class="${S.built === "doc:" + id ? "" : "fade"}">${crumbs(parts)}
     <div class="grim"><div class="gh"><h2>${esc(shown ? shown.title : d.title)}</h2>${isNew(d) ? `<span class="tag new">new from Munin</span>` : ""}</div>
