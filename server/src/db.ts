@@ -58,3 +58,24 @@ export async function loadAll(db: D1Database) {
   for (const d of docs) S[d.col][d.id] = { ...d.data, id: d.id };
   return S;
 }
+
+// ---- the event log (see schema.sql): append-only, no note text
+export const EVENT_TYPES = ["capture", "sort", "pick", "finish", "reopen", "settle", "hex", "unhex", "burn", "focus", "close", "create", "edit", "waystone"];
+export type CottageEvent = { cid?: string; at?: number; type: string; who?: string; ref?: string; kind?: string; area?: string; project?: string; bin?: string; extra?: Record<string, unknown> };
+const short = (v: unknown, n = 80) => (typeof v === "string" && v ? v.slice(0, n) : null);
+export async function logEvents(db: D1Database, evs: CottageEvent[]): Promise<number> {
+  await ensureSchema(db);
+  const ok = evs.filter(e => e && EVENT_TYPES.includes(e.type)).slice(0, 200);
+  if (!ok.length) return 0;
+  const res = await db.batch(ok.map(e => db.prepare(
+    "INSERT OR IGNORE INTO events (cid, at, type, who, ref, kind, area, project, bin, extra) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10)"
+  ).bind(short(e.cid, 60), Number(e.at) > 0 ? Math.round(Number(e.at)) : Date.now(), e.type, e.who === "Claude" ? "Claude" : "Sophia", short(e.ref, 190), short(e.kind, 20), short(e.area, 20), short(e.project, 180), short(e.bin, 10),
+    e.extra && typeof e.extra === "object" ? JSON.stringify(e.extra).slice(0, 500) : null)));
+  return res.reduce((n, r) => n + ((r.meta as any)?.changes || 0), 0);   // how many were new (resends are skipped)
+}
+export const logEvent = (db: D1Database, e: CottageEvent) => logEvents(db, [e]).catch(() => 0);   // never let logging break a write
+export async function eventsSince(db: D1Database, sinceId: number, limit: number) {
+  await ensureSchema(db);
+  const rows = await db.prepare("SELECT id, at, type, who, ref, kind, area, project, bin, extra FROM events WHERE id > ?1 ORDER BY id LIMIT ?2").bind(sinceId, limit).all();
+  return (rows.results as any[]).map(r => ({ ...r, extra: r.extra ? JSON.parse(r.extra) : null }));
+}

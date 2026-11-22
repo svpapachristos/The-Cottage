@@ -59,8 +59,7 @@ function icon(k) {
 const img = k => `<img class="pi" src="${icon(k)}" alt="">`;
 function drawIcons() {
   $("searchBtn").innerHTML = `<img src="${icon("search")}" alt="">`; $("menuBtn").innerHTML = `<img src="${icon("menu")}" alt="">`;
-  $("libBtn").innerHTML = `<img src="${icon("library")}" alt="">`;
-  $("addFab").innerHTML = `<img src="${icon("quill")}" alt="">`;
+  $("doorWriteImg").innerHTML = `<img src="${icon("quill")}" alt="">`;
 }
 // The spine of a project's book, colored from its name so it's always the same.
 const SPINE_COLS = ["#dc5aff", "#ff7ad9", "#8ac0e8", "#9fe6d0", "#ffd070", "#ffb38a", "#b45ad8", "#4fd17a"];

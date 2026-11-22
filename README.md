@@ -8,9 +8,10 @@ It runs on my own Cloudflare Worker with a SQL database, installs as an app on m
 
 ## What it does
 
+- **Four doors, nothing more.** A bar along the bottom: **Home** (Munin's one line, today's one to three things, a box to write anything down, and the cottage), **Write** (the Book of Shadows), **Focus** (the rune table) and **Munin**. Everything else is one tap deeper.
 - **Rooms for each part of life.** The Workshop (my studio, Hedgewitch Games), the Coven Chamber and Observatory (my two big games), the Study (school), the Writing Desk (jobs and money), and the Hearth (the big picture). Projects sit on each room's shelf as little objects. Pick one up to see its one next step and the thread of steps toward a milestone.
-- **The Book of Shadows.** One place to write anything down. Munin reads each new rune and files it in the right room when he's sure, or leaves a suggestion when he isn't.
-- **Today and the road.** Pick up to three things for today. Each finished thing lights a lantern on the road out of the cottage, which forks into three trails (Job, Games, School) with milestones called waystones.
+- **The Book of Shadows: one way in, four bins.** Write anything, from the home screen or the book. Munin pre-picks a bin for each rune (**Do**, **Keep**, **Not sure yet**, **Let go**) and a room, and one tap files it. A **Do** can go straight onto Today.
+- **Today and the road.** Today holds only to-dos: pick one to three. Each finished thing lights a lantern on the road out of the cottage, which forks into three trails (Job, Games, School) with milestones called waystones.
 - **The rune table.** Set down one project and work on just that, with a focus candle and a jot box for stray thoughts.
 - **Nothing is deleted by accident.** Hexing something turns it into a named log on the woodpile. It's only gone when I drag the log into the fire, or burn the pile in the night ritual.
 - **The night ritual.** Empty your head, see what you sent out, feed the fire, pick tomorrow's first thing, lights out. Salem the cat curls up by the hearth.
@@ -40,12 +41,14 @@ A badge shows which brain is answering, wherever Munin speaks:
         ▼                      ▼                       ▼
    D1 (SQLite)            KV (sign-in)           Workers AI
    docs + rev counter     sessions, OAuth        Hearth brain
+   events (the log)
 ```
 
 - **Front end:** vanilla JavaScript, no framework and no dependencies. All art is drawn in code (pixel art, Bayer dithering) on canvas, and all sound is synthesized. `src/shell.html` holds the markup and styles; `src/js/01-data.js` to `09-table.js` hold the logic, in load order.
 - **Build:** `src/build.py` joins the shell and scripts into one page, embeds the m5x7 font, and writes `server/public/` along with the install manifest, service worker and icons (PNG icons are written by hand, with no image libraries).
 - **Back end:** a TypeScript Cloudflare Worker.
   - `db.ts`, `schema.sql`: one `docs` table stores every document as JSON. The fields I query (`kind`, `area`, `project`, `done`, `wood`, `updated`) are generated columns with indexes, so it's flexible like a document store but queryable like SQL. A single `rev` counter rises with every write, so each device asks "what changed since N?" and syncs incrementally. Deletes are kept as tombstones so other devices hear about them.
+  - **The event log** (`events` table, `/api/events`): one append-only row for every capture, sort, pick, finish, hex, burn, focus session and night closed, from the app and from Claude's connector. It records what happened, when, and which room, project and kind it touched, but never a note's text, so it's safe to chart in public. Sort events also record Munin's pick, so his accuracy can be measured. Each device gives every event its own id, so a resend after a dropped connection is never counted twice.
   - `auth.ts`: passphrase sign-in with rate limiting and a session cookie.
   - `mcp.ts`: an MCP server, so Claude can read and write the Cottage from any chat.
   - `ai.ts`: Munin's Hearth brain; every answer reports which model gave it.
@@ -104,12 +107,12 @@ The plan is the blueprint agreed on 21 Nov 2026 (kept as a pinned page inside th
 | Phase | Build | Status |
 |---|---|---|
 | 1. Foundation | Font restored, this README, the old claude.ai artifact mode retired, the brain badge, stale records fixed, named woodpile logs | Done |
-| 2. The belt | Event log, one way in, Munin splits rambles from actions, four bins (Do, Keep, Scry, Let go), Today pulls only from Do, a simpler home screen | Next |
+| 2. The belt | Simple home and four doors, one way in, four bins (Do, Keep, Not sure yet, Let go), Today from Do, the event log; then Munin splits rambles from actions, two-list rooms, room lights | In progress: the visible half and the event log are built |
 | 3. Memory | The compass (a living page about goals), a chronicle entry for every working chat, the scrying bowl for undecided things | |
 | 4. The mind | Untangling with Claude, morning brief, nudges, patterns Munin notices | |
 | 5. Showcase | Munin's Ledger (SQL), job application tracker, spreadsheet export, a public Tableau dashboard (counts and trends only) | |
 
-**As a data portfolio:** the event log (phase 2) records every capture, sort, finish and hex, so my own working habits become a real dataset for SQL, spreadsheets and Tableau. Raw personal notes never leave the Cottage; only counts and trends are published.
+**As a data portfolio:** the event log records every capture, sort, finish and hex, so my own working habits become a real dataset for SQL, spreadsheets and Tableau. Raw personal notes never leave the Cottage; only counts and trends are published.
 
 ## House rules
 

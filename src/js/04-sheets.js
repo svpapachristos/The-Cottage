@@ -1,8 +1,8 @@
 // ============================================================ 04 · sheets: the panels that slide in for writing, editing, finding and planning
 
 let sheetMode = null;
-function openSheet(mode, html, wide) { sheetMode = mode; const sh = $("sheet"); sh.innerHTML = html; sh.classList.toggle("wide", !!wide); sh.classList.add("open"); $("veil").classList.add("open"); sh.scrollTop = 0; }
-function closeSheet() { $("sheet").classList.remove("open"); $("veil").classList.remove("open"); sheetMode = null; }
+function openSheet(mode, html, wide) { sheetMode = mode; const sh = $("sheet"); sh.innerHTML = html; sh.classList.toggle("wide", !!wide); sh.classList.add("open"); $("veil").classList.add("open"); sh.scrollTop = 0; lightDoor(); }
+function closeSheet() { $("sheet").classList.remove("open"); $("veil").classList.remove("open"); sheetMode = null; lightDoor(); }
 $("veil").onclick = closeSheet;
 function context() { const r = parseRoute(S.route); if (r.v === "p" && projectById(r.id)) { const pr = projectById(r.id); return { area: pr.area || "games", project: pr.virtual ? "" : pr.id }; }
   if (r.v === "table" && tableProject()) { const pr = tableProject(); return { area: pr.area || "games", project: pr.virtual ? "" : pr.id }; } if (r.v === "room" && ROOMS[r.id]) return { area: r.id, project: "" }; if (r.v === "doc" && S.items[r.id]) { const d = S.items[r.id]; return { area: roomOf(d), project: d.project || "" }; } return null; }
@@ -13,7 +13,7 @@ function openAdd(preset) {
   const hereName = here ? (ctx.project && S.projects[ctx.project] ? S.projects[ctx.project].name : "the " + ROOMS[ctx.area].name) : "";
   openSheet("add", `<h3>${img("quill")} Write a rune</h3>
     <textarea id="aText" rows="5" placeholder="Anything: a to-do, an idea, a question, a link, a whole plan..."></textarea>
-    <div class="chips" id="aDest">${here ? `<button class="chip on" data-dest="here">Put it in ${esc(hereName)}</button>` : ""}<button class="chip ${here ? "" : "on"}" data-dest="book">${MUNIN_AI && PREF.get("autofile", true) ? "Give it to Munin" : "Into the Book of Shadows"}</button></div>
+    <div class="chips" id="aDest">${here ? `<button class="chip on" data-dest="here">Put it in ${esc(hereName)}</button>` : ""}<button class="chip ${here ? "" : "on"}" data-dest="book">${MUNIN_AI && PREF.get("autofile", false) ? "Give it to Munin" : "Into the Book of Shadows"}</button></div>
     <div id="aHere" ${here ? "" : "hidden"}><div class="chips" id="aKinds">${["auto", "todo", "note", "idea", "question", "decision", "link", "doc"].map(k => `<button class="chip ${k === "auto" ? "on" : ""}" data-ak="${k}">${k === "auto" ? "Figure it out" : KINDS[k]}</button>`).join("")}</div></div>
     <div class="sub" id="aHint">${here ? "" : bookHint()}</div>
     <div class="btns"><span class="spacer"></span><span class="sub" id="aStatus"></span><button class="main" id="aSave">${here ? "Write it down" : "Inscribe"}</button></div>`);
@@ -22,14 +22,14 @@ function openAdd(preset) {
   $("aKinds").onclick = e => { const b = e.target.closest("[data-ak]"); if (!b) return; kind = b.dataset.ak; [...$("aKinds").children].forEach(c => c.classList.toggle("on", c === b)); };
   $("aSave").onclick = async () => {
     const text = $("aText").value.trim(); if (!text) return;
-    if (dest === "book") { const ids = inscribe(text, true); closeSheet(); if (!autoFile(ids)) toast("Inscribed in the Book of Shadows", "Open the book", () => go("#book")); return; }
+    if (dest === "book") { const ids = inscribe(text, true, "quill"); closeSheet(); if (!autoFile(ids)) toast("Inscribed in the Book of Shadows", "Open the book", () => go("#book")); return; }
     if (dest === "auto") { $("aStatus").textContent = "Munin is reading..."; $("aSave").disabled = true; const it = inscribe(text, true)[0]; try { const [v] = await classify([text]); if (v) { closeSheet(); sendRune(S.items[it], v.area, v.project, v.kind, true); return; } } catch (e) { } closeSheet(); toast("Munin couldn't decide, so it's waiting in the book", "Open the book", () => go("#book")); return; }
     addHere(text, kind, ctx.area, ctx.project); closeSheet();
   };
   $("aText").onkeydown = e => { if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) $("aSave").click(); };
   setTimeout(() => $("aText").focus(), 50);
 }
-const bookHint = () => MUNIN_AI && PREF.get("autofile", true) ? "Munin reads it right away and carries it to the right room. If he isn't sure, it waits in the Book of Shadows." : "It waits in the Book of Shadows until you, or Munin, send it to a room.";
+const bookHint = () => MUNIN_AI && PREF.get("autofile", false) ? "Munin reads it right away and carries it to the right room. If he isn't sure, it waits in the Book of Shadows." : "It waits in the Book of Shadows until you, or Munin, send it to a room.";
 function splitTitle(text) { const lines = text.split("\n"); let title = lines[0].replace(/^#+\s*/, "").trim(), body = lines.slice(1).join("\n").trim(); if (title.length > 140) { body = text; title = title.slice(0, 80).replace(/\s+\S*$/, "") + "..."; } return { title, body }; }
 function guessKind(text) {
   const { title } = splitTitle(text), link = (text.match(/https?:\/\/\S+/) || [""])[0];
@@ -215,7 +215,7 @@ function revealItem(id) {
 
 // ---- cottage keeping: backups, sound, how it works
 function openMenu() {
-  const snd = PREF.get("sound", false), af = PREF.get("autofile", true);
+  const snd = PREF.get("sound", false), af = PREF.get("autofile", false);
   openSheet("menu", `<h3>${img("menu")} Cottage keeping</h3>
     <div class="card"><div class="lbl">Sound</div><div class="sub">Soft chimes when you inscribe, send and finish things, a crackle when wood burns, and Salem's purr. Off unless you turn it on, and only on this device.</div>
       <div class="btns" style="margin-top:8px"><button class="${snd ? "main" : ""}" id="sndBtn">${snd ? "Sound is on" : "Sound is off"}</button></div></div>
@@ -230,7 +230,7 @@ function openMenu() {
     <div class="btns">${SERVER ? `<button class="ghost" id="mOut">Lock the door (sign out)</button>` : ""}<span class="spacer"></span><button id="mClose">Close</button></div>`);
   $("mClose").onclick = closeSheet; if ($("mOut")) $("mOut").onclick = signOut;
   $("sndBtn").onclick = () => { const on = !PREF.get("sound", false); PREF.set("sound", on); if (on) { audioOn(); sfx("rune"); } $("sndBtn").textContent = on ? "Sound is on" : "Sound is off"; $("sndBtn").classList.toggle("main", on); };
-  $("afBtn").onclick = () => { const on = !PREF.get("autofile", true); PREF.set("autofile", on); $("afBtn").textContent = on ? "On" : "Off"; $("afBtn").classList.toggle("main", on); };
+  $("afBtn").onclick = () => { const on = !PREF.get("autofile", false); PREF.set("autofile", on); $("afBtn").textContent = on ? "On" : "Off"; $("afBtn").classList.toggle("main", on); };
   $("bkSave").onclick = backup;
   $("bkFile").onchange = e => { const f = e.target.files[0]; if (f) restore(f, t => { if ($("bkStatus")) $("bkStatus").textContent = t; }); };
 }

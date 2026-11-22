@@ -2,7 +2,7 @@
 // Claude reaches it at /mcp after Sophia approves the connection with her passphrase.
 // Every tool reads or writes the same database the app uses.
 import type { Env } from "./index";
-import { loadAll, writeDoc, getDoc, validId, type Doc } from "./db";
+import { loadAll, writeDoc, getDoc, validId, logEvent, type Doc } from "./db";
 import { ROOMS, TRAILS, road, threadOf, nextStep, projects, items, isRune, roomOf, resolve, live, trailOf, type World } from "./cottage";
 
 const PROTOCOLS = ["2026-07-28", "2025-11-25", "2025-06-18", "2025-03-26", "2024-11-05"];
@@ -89,7 +89,8 @@ async function callTool(env: Env, name: string, a: any): Promise<string> {
     const [first, ...rest] = text.split("\n"), id = newId("r");
     const d: Doc = { kind: a.kind && KINDS.includes(a.kind) ? a.kind : "note", title: first.slice(0, 200), body: rest.join("\n").trim(), area: "book", project: "", link: (text.match(/https?:\/\/\S+/) || [""])[0], done: false, pinned: false, created: now(), updated: now(), by: "Claude", seen: false };
     if (a.area) d.suggest = { kind: d.kind, area: a.area, project: a.project || "", title: d.title };
-    await writeDoc(db, "items", id, d); return `Inscribed in the Book of Shadows [i:${id}].`;
+    await writeDoc(db, "items", id, d); await logEvent(db, { type: "capture", who: "Claude", ref: "i:" + id, kind: d.kind, area: "book", extra: { source: "chat" } });
+    return `Inscribed in the Book of Shadows [i:${id}].`;
   }
   if (name === "cottage_save_item") {
     const id = a.id ? String(a.id) : newId(String(a.kind || "n").slice(0, 1)); if (!validId(id)) throw new Error("bad id");
@@ -102,7 +103,10 @@ async function callTool(env: Env, name: string, a: any): Promise<string> {
     if (old && d.kind === "doc" && (a.body !== undefined || a.title !== undefined) && (old.body !== d.body || old.title !== d.title))
       d.history = [{ title: old.title || "", body: old.body || "", at: old.updated || old.created || now(), by: old.by || "" }, ...(old.history || [])].slice(0, 15);
     d.updated = now(); d.seen = false; if (!old) d.by = "Claude";
-    await writeDoc(db, "items", id, d); return `${old ? "Updated" : "Saved"} ${d.kind} "${d.title}" [i:${id}].`;
+    await writeDoc(db, "items", id, d);
+    const type = !old ? "create" : a.done === true && !old.done ? (d.kind === "question" ? "settle" : "finish") : a.done === false && old.done ? "reopen" : "edit";
+    await logEvent(db, { type, who: "Claude", ref: "i:" + id, kind: d.kind, area: d.area, project: d.project || "", extra: a.pick !== undefined && a.pick !== (old && old.pick) ? { pick: a.pick } : undefined });
+    return `${old ? "Updated" : "Saved"} ${d.kind} "${d.title}" [i:${id}].`;
   }
   if (name === "cottage_save_project") {
     const id = String(a.id || ""); if (!validId(id)) throw new Error("bad id");
@@ -110,16 +114,17 @@ async function callTool(env: Env, name: string, a: any): Promise<string> {
     if (!old && !a.name) throw new Error("a new project needs a name");
     const d: Doc = { ...(old || { area: "games", status: "", next: "", notes: "", version: "", link: "", order: 50, created: now() }) };
     for (const k of ["name", "area", "status", "next", "notes", "version", "link", "linkLabel", "trail", "obj", "thread", "links"]) if (a[k] !== undefined) d[k] = a[k];
-    d.updated = now(); await writeDoc(db, "projects", id, d); return `${old ? "Updated" : "Created"} project "${d.name}" [p:${id}].`;
+    d.updated = now(); await writeDoc(db, "projects", id, d); await logEvent(db, { type: old ? "edit" : "create", who: "Claude", ref: "p:" + id, area: d.area, project: id });
+    return `${old ? "Updated" : "Created"} project "${d.name}" [p:${id}].`;
   }
   if (name === "cottage_hex" || name === "cottage_toss") {
     const ref = String(a.ref || ""), col = ref.startsWith("p:") ? "projects" : ref.startsWith("i:") ? "items" : null; if (!col) throw new Error("use i:<id> or p:<id>");
     const id = ref.slice(2), old = await getDoc(db, col, id); if (!old) throw new Error("not found");
-    await writeDoc(db, col, id, { ...old, wood: now(), updated: now() }); return `Hexed "${old.title || old.name}" into firewood. It's on the woodpile by the hearth until Sophia burns it (she can pull it back off the pile any time before then).`;
+    await writeDoc(db, col, id, { ...old, wood: now(), updated: now() }); await logEvent(db, { type: "hex", who: "Claude", ref: ref, kind: old.kind, area: old.area, project: col === "projects" ? id : old.project || "" }); return `Hexed "${old.title || old.name}" into firewood. It's on the woodpile by the hearth until Sophia burns it (she can pull it back off the pile any time before then).`;
   }
   if (name === "cottage_reach_waystone") {
     const r = (await getDoc(db, "meta", "road")) || {}; const st = r[a.trail] || []; const w = st.find((x: Doc) => x.id === a.id); if (!w) throw new Error("no such waystone");
-    w.done = a.reached !== false; if (w.done) w.doneAt = now(); r.updated = now(); await writeDoc(db, "meta", "road", r); return `${w.done ? "Reached" : "Not reached"}: ${w.title}.`;
+    w.done = a.reached !== false; if (w.done) w.doneAt = now(); r.updated = now(); await writeDoc(db, "meta", "road", r); await logEvent(db, { type: "waystone", who: "Claude", ref: `w:${a.trail}:${a.id}`, extra: { reached: w.done } }); return `${w.done ? "Reached" : "Not reached"}: ${w.title}.`;
   }
   throw new Error("unknown tool " + name);
 }

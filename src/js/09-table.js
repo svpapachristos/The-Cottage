@@ -64,7 +64,7 @@ function wireFireplace(id, onBurn) {
 // ---- the rune table
 const tableMeta = () => S.meta.table || {};
 function tableProject() { const id = tableMeta().project; return id ? projectById(id) : null; }
-function setTable(pid) { putMeta("table", { project: pid, since: Date.now() }); S.flash.munin = Date.now(); sfx("rune"); go("#table"); }
+function setTable(pid) { putMeta("table", { project: pid, since: Date.now() }); logEvent("focus", null, { project: pid }); S.flash.munin = Date.now(); sfx("rune"); go("#table"); }
 function clearTable() { putMeta("table", { project: "", since: Date.now() }); }
 function candleState() { const c = PREF.get("candle", null); return c && c.mins ? c : { mins: 25, endAt: 0, left: 0 }; }
 function candleLeft(c = candleState()) { return c.endAt ? Math.max(0, c.endAt - Date.now()) : c.left || 0; }
@@ -132,7 +132,7 @@ function candleTick() {
 }
 function jot(pid) {
   const el = $("jotIn"), t = el ? el.value.trim() : ""; if (!t) return;
-  const ids = inscribe(t, true); ids.forEach(id => { const it = S.items[id]; if (it) S.items[id] = { ...it, jotFrom: pid }; if (it) put("items", id, { ...it, jotFrom: pid }); });
+  const ids = inscribe(t, true, "table"); ids.forEach(id => { const it = S.items[id]; if (it) S.items[id] = { ...it, jotFrom: pid }; if (it) put("items", id, { ...it, jotFrom: pid }); });
   el.value = ""; if (!autoFile(ids)) toast("Munin took it to the Book of Shadows"); fly(el.getBoundingClientRect());
 }
 function swapTable() {

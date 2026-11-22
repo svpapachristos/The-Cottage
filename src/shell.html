@@ -15,7 +15,7 @@ body { overflow-x: hidden; background: radial-gradient(ellipse at 50% -10%, #241
 body.night { background: radial-gradient(ellipse at 50% -10%, #120a22 0%, #06030c 60%) fixed; }
 .px { font-family: "m5x7", monospace; -webkit-font-smoothing: none; line-height: 1; font-weight: normal; }
 canvas { image-rendering: pixelated; image-rendering: crisp-edges; }
-#app { max-width: 1100px; margin: 0 auto; padding: calc(10px + env(safe-area-inset-top)) calc(16px + env(safe-area-inset-right)) 130px calc(16px + env(safe-area-inset-left)); }
+#app { max-width: 1100px; margin: 0 auto; padding: calc(10px + env(safe-area-inset-top)) calc(16px + env(safe-area-inset-right)) 150px calc(16px + env(safe-area-inset-left)); }
 header { display: flex; align-items: center; gap: 10px; padding: 2px 0 8px; }
 #logo { width: 40px; height: 40px; flex: none; cursor: pointer; }
 .brand { cursor: pointer; min-width: 0; }
@@ -47,6 +47,14 @@ textarea { width: 100%; resize: vertical; }
 .lbl .r { margin-left: auto; font-family: system-ui, sans-serif; font-size: 13px; }
 /* home */
 .home { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 22px; align-items: start; }
+.home > .left { grid-column: 1; grid-row: 1; }
+.homecol { grid-column: 2; grid-row: 1; display: flex; flex-direction: column; gap: 14px; min-width: 0; }
+.houselinks { display: flex; gap: 8px; justify-content: center; margin-top: 10px; flex-wrap: wrap; }
+.houselinks button { display: inline-flex; align-items: center; gap: 6px; font-size: 14px; }
+.capture textarea { width: 100%; min-height: 64px; resize: vertical; font-size: 16px; background: #1c1132; }
+.caprow { display: flex; align-items: center; gap: 10px; justify-content: space-between; margin-top: 8px; flex-wrap: wrap; }
+.caprow .sub a { color: var(--mint); cursor: pointer; display: inline-flex; align-items: center; gap: 5px; }
+.caprow .main { margin-left: auto; }
 .left { display: flex; flex-direction: column; gap: 0; align-items: center; }
 .house { position: relative; margin: 0 auto; transition: transform .28s ease-in, opacity .28s ease-in; }
 .house.zoom { opacity: 0; }
@@ -170,7 +178,24 @@ h3.sec .r { margin-left: auto; font: 14px system-ui, sans-serif; }
 .rune .t { font-size: 15.5px; color: var(--ink); overflow-wrap: anywhere; }
 .rune .file { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 8px; align-items: center; }
 .rune .file select { font-size: 13px; padding: 5px 6px; max-width: 46%; }
-.rune .sug { color: var(--mint); font-size: 12.5px; margin-top: 6px; }
+.rune .file[hidden] { display: none; }
+.rune .rhead { display: flex; gap: 10px; }
+/* the four bins */
+.bins { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; margin-top: 10px; }
+.bin { display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 8px 4px; border-radius: 10px; border: 1.5px solid var(--line); background: #170d2b; color: var(--dim); cursor: pointer; text-align: center; min-height: 52px; justify-content: center; }
+.bin b { font-weight: 600; font-size: 14px; color: var(--text); }
+.bin span { font-size: 11px; line-height: 1.2; }
+.bin:hover { border-color: #6a4a9a; background: #22143c; }
+.bin.on { box-shadow: 0 0 0 1px currentColor inset, 0 0 12px -2px currentColor; }
+.bin.b-do.on { color: var(--lilac); border-color: var(--lilac); background: #2a1446; }
+.bin.b-keep.on { color: var(--ice); border-color: var(--ice); background: #14233a; }
+.bin.b-scry.on { color: var(--gold); border-color: var(--gold); background: #2a2214; }
+.bin.b-letgo.on { color: var(--ember); border-color: var(--ember); background: #2a160e; }
+.bin.on span { color: currentColor; }
+.rune .dest { font-size: 12.5px; color: var(--dim); margin-top: 8px; display: flex; flex-wrap: wrap; align-items: center; gap: 4px 6px; }
+.rune .dest b { color: var(--ink); font-weight: 600; }
+.linkbtn { background: none; border: none; padding: 0 2px; color: var(--lilac); font-size: 12.5px; cursor: pointer; text-decoration: underline; text-underline-offset: 2px; }
+@media (max-width: 420px) { .bins { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 .rune .from { color: var(--gold); font-size: 12px; margin-top: 4px; }
 /* the brain badge: which brain is answering */
 .brain { display: inline-flex; align-items: center; gap: 4px; font: 12px/1 system-ui, sans-serif; padding: 3px 8px; border-radius: 999px; border: 1px solid; white-space: nowrap; vertical-align: middle; cursor: help; }
@@ -181,13 +206,16 @@ h3.sec .r { margin-left: auto; font: 14px system-ui, sans-serif; }
 .brainrow { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-top: 8px; font-size: 12px; color: var(--dim); }
 .a > .brain { display: flex; width: max-content; margin-bottom: 6px; }
 .flyer { position: fixed; z-index: 40; width: 48px; height: 36px; pointer-events: none; }
-/* floating buttons */
-.fabs { position: fixed; right: calc(20px + env(safe-area-inset-right)); bottom: calc(18px + env(safe-area-inset-bottom)); display: flex; flex-direction: column; gap: 10px; z-index: 15; }
-.fab { width: 60px; height: 60px; border-radius: 50%; border: 2px solid var(--lilac); background: #2a1a4a; display: grid; place-items: center; padding: 0; box-shadow: 0 6px 18px rgba(0,0,0,.45); cursor: pointer; }
-.fab:hover { transform: scale(1.06); }
-.fab canvas, .fab img { width: 40px; height: 40px; image-rendering: pixelated; }
-.fab.add { background: var(--lilac); }
-.fab.add img { width: 30px; height: 30px; }
+/* the four doors */
+.doors { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(12px + env(safe-area-inset-bottom)); z-index: 15; display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; width: min(460px, calc(100% - 24px)); padding: 6px; background: rgba(21,12,39,.96); border: 2px solid #4a2a6a; border-radius: 18px; box-shadow: 0 8px 24px rgba(0,0,0,.5); backdrop-filter: blur(6px); }
+.doors button { display: flex; flex-direction: column; align-items: center; gap: 3px; padding: 6px 4px 5px; border: 1.5px solid transparent; border-radius: 12px; background: none; color: var(--dim); font: 12.5px/1 system-ui, sans-serif; cursor: pointer; }
+.doors button canvas, .doors .dimg img { width: 28px; height: 28px; image-rendering: pixelated; display: block; }
+.doors .dimg { width: 28px; height: 28px; display: grid; place-items: center; }
+.doors .dimg img { width: 22px; height: 22px; }
+.doors .dglyph { font-size: 24px; line-height: 28px; height: 28px; color: var(--mint); }
+.doors button:hover { color: var(--text); background: #24163c; }
+.doors button.on { color: var(--text); background: #2a1a4a; border-color: #6a3aa0; }
+.doors button[data-door="write"] .dimg { background: var(--lilac); border-radius: 50%; width: 30px; height: 28px; }
 /* sheets */
 .veil { position: fixed; inset: 0; background: rgba(5,0,12,0.7); z-index: 20; display: none; }
 .veil.open { display: block; }
@@ -217,6 +245,8 @@ mark { background: color-mix(in srgb, var(--gold) 35%, transparent); color: inhe
 .mhead .say { font-size: 15.5px; }
 .mgrid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
 .mgrid button { text-align: left; padding: 10px 12px; display: flex; flex-direction: column; gap: 2px; }
+.mgrid button.hl { border-color: #8a6a20; background: #241a14; }
+.mgrid button b .pi { width: 14px; height: 14px; vertical-align: -1px; }
 .mgrid button b { font-family: "m5x7", monospace; -webkit-font-smoothing: none; font-weight: normal; font-size: 22px; line-height: 1; color: var(--text); }
 .mgrid button span { font-size: 12.5px; color: var(--dim); }
 #askLog { display: flex; flex-direction: column; gap: 10px; flex: 1; }
@@ -308,7 +338,7 @@ mark { background: color-mix(in srgb, var(--gold) 35%, transparent); color: inhe
 .signin h2 { font-size: 44px; margin: 0; }
 .signin form { display: flex; flex-direction: column; gap: 10px; width: 100%; }
 .signin input { width: 100%; text-align: center; padding: 11px; font-size: 16px; }
-body.signedout .fabs { display: none; }
+body.signedout .doors { display: none; }
 /* the rune table */
 .tablecard { width: 100%; display: flex; align-items: center; gap: 12px; text-align: left; padding: 10px 14px; border-radius: 12px; background: linear-gradient(135deg, #2a1648, #170d2b); border: 1.5px solid #6a3aa0; }
 .tablecard:hover { border-color: var(--lilac); }
@@ -368,7 +398,7 @@ body.signedout .fabs { display: none; }
 .lightsout { display: flex; flex-direction: column; align-items: center; gap: 14px; text-align: center; }
 .lightsout canvas { max-width: 100%; border-radius: 12px; border: 2px solid #2a1a44; }
 .lightsout .gn { font-family: "m5x7", monospace; -webkit-font-smoothing: none; font-size: 40px; line-height: 1; color: var(--ink); }
-#toast { position: fixed; left: 50%; bottom: calc(26px + env(safe-area-inset-bottom)); transform: translateX(-50%); background: var(--lilac); color: var(--bg); padding: 9px 16px; border-radius: 999px; font-size: 14px; font-weight: 600; opacity: 0; pointer-events: none; transition: opacity .25s; z-index: 60; max-width: 90%; }
+#toast { position: fixed; left: 50%; bottom: calc(96px + env(safe-area-inset-bottom)); transform: translateX(-50%); background: var(--lilac); color: var(--bg); padding: 9px 16px; border-radius: 999px; font-size: 14px; font-weight: 600; opacity: 0; pointer-events: none; transition: opacity .25s; z-index: 60; max-width: 90%; }
 #toast.show { opacity: 1; pointer-events: auto; }
 #toast a { color: var(--bg); text-decoration: underline; margin-left: 8px; cursor: pointer; }
 footer { color: #5a4a78; font-size: 12px; text-align: center; margin-top: 34px; }
@@ -376,6 +406,7 @@ footer { color: #5a4a78; font-size: 12px; text-align: center; margin-top: 34px; 
 @keyframes fade { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
 @media (max-width: 900px) {
   .home { grid-template-columns: 1fr; }
+  .home > .left, .homecol { grid-column: 1; grid-row: auto; }
   .cols { grid-template-columns: 1fr; }
 }
 @media (max-width: 700px) {
@@ -397,8 +428,6 @@ footer { color: #5a4a78; font-size: 12px; text-align: center; margin-top: 34px; 
   .sheet, .sheet.wide { left: 0; right: 0; bottom: 0; top: auto; width: 100%; max-height: 90vh; border-radius: 16px 16px 0 0; border-bottom: none; padding-bottom: calc(16px + env(safe-area-inset-bottom)); }
   .ptitle h2 { font-size: 38px; }
   .grim .gh h2 { font-size: 38px; }
-  .fab { width: 54px; height: 54px; }
-  .fab canvas, .fab img { width: 34px; height: 34px; }
   .mgrid { grid-template-columns: 1fr 1fr; }
   .munin canvas { width: 56px; height: 56px; }
   .trow .tw { margin-left: 0; } .tstep { width: 100%; margin-left: 0; }
@@ -419,7 +448,6 @@ footer { color: #5a4a78; font-size: 12px; text-align: center; margin-top: 34px; 
     <canvas id="logo" width="16" height="16" aria-hidden="true" data-go=""></canvas>
     <div class="brand" data-go=""><h1 class="px">THE COTTAGE</h1><div class="sub" id="hdrSub"></div></div>
     <span class="spacer"></span>
-    <button class="iconbtn" id="libBtn" aria-label="The library: every page" title="The library"></button>
     <button class="iconbtn" id="searchBtn" aria-label="Find anything" title="Find (/)"></button>
     <button class="iconbtn" id="menuBtn" aria-label="Cottage keeping" title="Backups and settings"></button>
   </header>
@@ -427,10 +455,13 @@ footer { color: #5a4a78; font-size: 12px; text-align: center; margin-top: 34px; 
   <main id="view"></main>
   <footer>The Cottage: a little Hedgewitch home for everything you know and plan.</footer>
 </div>
-<div class="fabs">
-  <button class="fab" id="muninFab" aria-label="Call Munin" title="Munin"><canvas id="muninFabCv" width="16" height="16"></canvas></button>
-  <button class="fab add" id="addFab" aria-label="Write a rune" title="Write a rune (N)"></button>
-</div>
+<!-- the four doors: the only navigation you ever need -->
+<nav class="doors" aria-label="The four doors">
+  <button data-door="home" aria-label="Home: the cottage and today"><canvas id="doorHomeCv" width="16" height="16"></canvas><span>Home</span></button>
+  <button data-door="write" aria-label="Write: the Book of Shadows" title="Write (N)"><span class="dimg" id="doorWriteImg"></span><span>Write</span></button>
+  <button data-door="focus" aria-label="Focus: the rune table"><span class="dglyph">ᚱ</span><span>Focus</span></button>
+  <button data-door="munin" aria-label="Munin" title="Munin (M)"><canvas id="muninFabCv" width="16" height="16"></canvas><span>Munin</span></button>
+</nav>
 <div class="veil" id="veil"></div>
 <div class="sheet" id="sheet" role="dialog" aria-modal="true"></div>
 <div class="ritual" id="ritual" role="dialog" aria-modal="true"></div>

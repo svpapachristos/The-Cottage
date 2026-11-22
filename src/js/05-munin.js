@@ -49,14 +49,16 @@ function doSay(act) {
 // ---- Munin's sheet: everything he can do, and a place to ask him things
 const ASK_CHIPS = ["What should I focus on today?", "What's waiting on me?", "Where does each game stand?", "What's my plan for money right now?", "What did we get done lately?"];
 function openMunin() {
-  const runes = items().filter(isRune).length, say = muninLine();
+  const runes = items().filter(isRune).length, say = muninLine(), fresh = items().filter(i => isNew(i) && !isRune(i)).length, qs = items().filter(openQ).length;
   openSheet("munin", `<div class="mhead"><canvas id="muninBig" width="16" height="16"></canvas><div><h3>Munin</h3><div class="say">${esc(say.text)}</div>${brainRow()}</div></div>
     <div class="mgrid">
-      <button data-m="rune"><b>Write a rune</b><span>Anything on your mind</span></button>
+      ${fresh ? `<button data-m="fresh" class="hl"><b>${img("feather")} New from your chats</b><span>${fresh} from Claude</span></button>` : ""}
+      ${qs ? `<button data-m="q" class="hl"><b>${img("question")} Waiting on you</b><span>${qs} to decide</span></button>` : ""}
+      <button data-m="rune"><b>Write it down</b><span>Anything on your mind</span></button>
       <button data-m="book"><b>Sort the book</b><span>${runes ? runes + " waiting" : "Nothing waiting"}</span></button>
-      <button data-m="plan"><b>Plan today</b><span>Pick up to three</span></button>
-      <button data-m="table"><b>The rune table</b><span>${tableProject() ? "Back to " + esc(tableProject().name) : "Work on one thing"}</span></button>
-      <button data-m="find"><b>Find something</b><span>Search everything</span></button>
+      <button data-m="plan"><b>Plan today</b><span>Pick one to three</span></button>
+      <button data-m="table"><b>Focus</b><span>${tableProject() ? "Back to " + esc(tableProject().name) : "Work on one thing"}</span></button>
+      <button data-m="road"><b>The road</b><span>Your three trails</span></button>
       <button data-m="library"><b>The library</b><span>Every page and plan</span></button>
       <button data-m="ritual"><b>Close up</b><span>The night ritual</span></button>
     </div>
@@ -68,11 +70,11 @@ function openMunin() {
   S.flash.munin = Date.now(); sfx("caw");
   drawChat();
   $("sheet").querySelector(".mgrid").onclick = e => { const b = e.target.closest("[data-m]"); if (!b) return; const m = b.dataset.m; closeSheet();
-    if (m === "rune") openAdd(); else if (m === "book") go("#book"); else if (m === "plan") openPlan(); else if (m === "find") openSearch(); else if (m === "table") go("#table"); else if (m === "library") go("#library"); else if (m === "ritual") openRitual(); };
+    if (m === "fresh" || m === "q") openSatchel(m === "fresh" ? "new" : "q"); else if (m === "road") go("#road"); else if (m === "rune") openAdd(); else if (m === "book") go("#book"); else if (m === "plan") openPlan(); else if (m === "find") openSearch(); else if (m === "table") go("#table"); else if (m === "library") go("#library"); else if (m === "ritual") openRitual(); };
   $("sheet").querySelector(".chips").onclick = e => { const b = e.target.closest("[data-ask]"); if (b) ask(b.dataset.ask); };
   $("askForm").onsubmit = e => { e.preventDefault(); ask($("askIn").value); };
   $("askIn").onkeydown = e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); ask($("askIn").value); } };
-  $("askWrite").onclick = () => { const t = $("askIn").value.trim(); if (!t) return; const ids = inscribe(t, true); $("askIn").value = ""; if (!autoFile(ids)) toast("Inscribed in the Book of Shadows"); };
+  $("askWrite").onclick = () => { const t = $("askIn").value.trim(); if (!t) return; const ids = inscribe(t, true, "munin"); $("askIn").value = ""; if (!autoFile(ids)) toast("Inscribed in the Book of Shadows"); };
 }
 function brainText() {
   const P = projects().map(p => `- [p:${p.id}] ${p.name} {${(ROOMS[p.area] || {}).name || ""}} ${p.version ? "(" + p.version + ") " : ""}status: ${p.status || "?"}${p.next ? "; next: " + p.next : ""}${p.link ? "; link: " + p.link : ""}${p.notes ? "\n  about: " + p.notes.replace(/\n/g, " ") : ""}\n  thread: ${threadOf(p).steps.map(x => (x.done ? "[done] " : "") + x.label + (x.kind === "stone" ? " (waystone)" : x.proj && x.proj.id !== p.id ? " (in " + x.proj.name + ")" : "")).join(" → ") || "(none)"}`).join("\n");
@@ -110,7 +112,7 @@ ${brainText()}`;
 }
 
 // ---- runes: write them into the book, sort them, send them
-function inscribe(text, single) {   // returns the ids of the new runes
+function inscribe(text, single, source) {   // returns the ids of the new runes; source (home, book, quill...) goes in the event log
   text = String(text || "").trim(); if (!text) return [];
   let chunks;
   if (single) chunks = [text];
@@ -122,39 +124,63 @@ function inscribe(text, single) {   // returns the ids of the new runes
       if (together) chunks.push(block.trim()); else for (const l of lines) chunks.push(l.replace(/^[-*•]\s+/, ""));
     }
   }
-  const ids = [];
+  const ids = []; EV.src = source || "book";
   chunks.forEach((c, n) => {
     const { title, body } = splitTitle(c), link = (c.match(/https?:\/\/\S+/) || [""])[0], kind = guessKind(c);
     const id = newId("r"); ids.push(id);
     put("items", id, { kind, title: title.slice(0, 200), body, area: "book", project: "", link, done: false, pinned: false, created: Date.now() + n, by: "Sophia" });
   });
-  sfx("rune");
+  EV.src = ""; sfx("rune");
   return ids;
 }
-// Munin reads new runes right away. The ones he's sure about, he carries to their rooms; the rest wait in the book with his suggestion.
-function autoFile(ids) {
-  if (!MUNIN_AI || !PREF.get("autofile", true) || !ids || !ids.length) return false;
+// ============================================================ the four bins
+// Every rune ends up in one of four bins. Munin pre-picks one (and a room); Sophia confirms with one tap.
+const BINS = {
+  do:    { name: "Do", hint: "a small action" },
+  keep:  { name: "Keep", hint: "a note, idea or plan" },
+  scry:  { name: "Not sure yet", hint: "decide later" },
+  letgo: { name: "Let go", hint: "to the woodpile" },
+};
+const KEEP_KINDS = ["note", "idea", "decision", "link", "doc"];
+const binOfKind = k => k === "todo" ? "do" : k === "question" ? "scry" : "keep";
+function binOf(l) { const sg = l.suggest; return sg && BINS[sg.bin] ? sg.bin : binOfKind(sg ? sg.kind : l.kind); }
+// Munin reads new runes and pre-picks a bin and a room for each. With "Munin files on his own" turned on,
+// the ones he's sure about (Do or Keep) are filed straight away; otherwise everything waits in the book for one tap.
+function pickBins(ids, speak) {
+  if (!MUNIN_AI || !ids || !ids.length) return false;
   const runes = ids.map(id => S.items[id]).filter(Boolean);
   S.flash.munin = Date.now();
   classify(runes.map(l => l.title + (l.body ? "\n" + l.body : ""))).then(out => {
-    let filed = 0, kept = 0;
+    let filed = 0;
     runes.forEach((l, n) => { const v = out[n], cur = S.items[l.id]; if (!v || !cur || !isRune(cur)) return;
-      if (v.sure) { setTimeout(() => sendRune(S.items[l.id], v.area, v.project, v.kind, false), filed * 260); filed++; }
-      else { saveItem(cur, { suggest: v }); kept++; } });
-    if (filed) sfx("send");
-    toast(filed && kept ? `Munin filed ${filed}, and ${kept} ${kept === 1 ? "waits" : "wait"} in the book for you` : filed ? `Munin filed ${filed === 1 ? "it" : "all " + filed}` : `${kept === 1 ? "It waits" : "They wait"} in the book with Munin's suggestion`, kept ? "Open the book" : null, () => go("#book"));
-  }).catch(() => toast("Safe in the Book of Shadows", "Open the book", () => go("#book")));
+      saveItem(cur, { suggest: v });
+      if (PREF.get("autofile", false) && v.sure && (v.bin === "do" || v.bin === "keep")) { setTimeout(() => fileRune(S.items[l.id], v.bin, v.area, v.project, false), filed * 260); filed++; } });
+    if (filed) { sfx("send"); toast(`Munin filed ${filed === 1 ? "it" : filed}`); }
+    else if (speak) toast(runes.length === 1 ? "Munin picked a bin for it" : "Munin picked a bin for each", "Open the book", () => go("#book"));
+  }).catch(() => { if (speak) toast("Safe in the Book of Shadows", "Open the book", () => go("#book")); });
   return true;
 }
+const autoFile = ids => pickBins(ids, true);   // the older name, used by the quill, the ritual and the rune table
+function fileRune(l, bin, area, project, last) {
+  if (!l || !BINS[bin]) return;
+  // the event log keeps which bin you chose and what Munin had picked, so you can see how often he gets it right
+  const pick = l.suggest ? { munin: binOf(l) } : { guess: binOf(l) }, auto = last === false && !!l.suggest && PREF.get("autofile", false);
+  if (bin === "letgo") { logEvent("sort", l, { bin, ...pick }); const el = document.querySelector(`[data-rune="${CSS.escape(l.id)}"]`); hex("items", l.id, el); return; }
+  const sg = l.suggest || {};
+  const kind = bin === "do" ? "todo" : bin === "scry" ? "question" : KEEP_KINDS.includes(sg.kind) ? sg.kind : KEEP_KINDS.includes(l.kind) ? l.kind : "note";
+  sendRune(l, area, project, kind, last, bin === "scry" ? { scry: Date.now() } : null, bin);
+  logEvent("sort", S.items[l.id], { bin, ...pick, auto: auto || undefined });
+}
 async function classify(texts) {
-  const prompt = `Sort notes into a personal organizer shaped like a cottage. Reply with JSON only: an array with one object per note, in order: {"kind": one of "todo","note","idea","question","link","decision","doc", "area": one of ${JSON.stringify(AREA_ORDER)}, "project": one of ${JSON.stringify(projects().map(p => p.id))} or "", "title": a short title in the person's own words (under 80 characters), "sure": true only if it obviously belongs in that area and project, otherwise false}.
+  const prompt = `Sort notes into a personal organizer shaped like a cottage. Reply with JSON only: an array with one object per note, in order: {"bin": one of "do","keep","scry","letgo", "kind": one of "todo","note","idea","question","link","decision","doc", "area": one of ${JSON.stringify(AREA_ORDER)}, "project": one of ${JSON.stringify(projects().map(p => p.id))} or "", "title": a short title in the person's own words (under 80 characters), "sure": true only if it obviously belongs in that area and project, otherwise false}.
 Areas: games = Hedgewitch Games (her small witchy browser games, the website, itch.io, ads); coven = Coven, her big witch roguelite and life's work; stargazer = Stargazer, her universe simulation; school = college, reapplying, choosing a degree; jobs = job search, resume, money, DLTracker; life = everything else, including the big picture.
 Projects: ${projects().map(p => p.id + " = " + p.name + " (" + p.area + ")").join("; ")}.
 "todo" = something to do; "question" = something to decide or answer later; "decision" = something already decided; "idea" = a possible future thing; "link" = mainly a URL; "doc" = a long plan or document with several parts; otherwise "note". Pick a project only when the note is clearly about it.
+Bins: "do" = a small concrete action she can do in one sitting (kind "todo"); "keep" = something to remember: a note, idea, decision, link, plan or a feeling worth writing down; "scry" = she's unsure, torn or lost about it, or it needs deciding later (kind "question"); "letgo" = only if the note itself says it's finished with or no longer matters.
 Notes: ${JSON.stringify(texts.map(t => t.slice(0, 1500)))}`;
   const v = await MUNIN_AI.json(prompt);
   const arr = Array.isArray(v) ? v : (v && Array.isArray(v.notes) ? v.notes : [v]);
-  return arr.map(x => x && typeof x === "object" ? { kind: KINDS[x.kind] && x.kind !== "log" ? x.kind : "note", area: ROOMS[x.area] && x.area !== "book" ? x.area : "life", project: live(S.projects[x.project]) ? x.project : "", title: String(x.title || "").slice(0, 120), sure: x.sure === true } : null);
+  return arr.map(x => x && typeof x === "object" ? { bin: BINS[x.bin] ? x.bin : binOfKind(x.kind), kind: KINDS[x.kind] && x.kind !== "log" ? x.kind : "note", area: ROOMS[x.area] && x.area !== "book" ? x.area : "life", project: live(S.projects[x.project]) ? x.project : "", title: String(x.title || "").slice(0, 120), sure: x.sure === true } : null);
 }
 async function sortBook() {
   const runes = items().filter(isRune).sort(byOld);
@@ -166,17 +192,23 @@ async function sortBook() {
       const part = runes.slice(i, i + 20), out = await classify(part.map(l => l.title + (l.body ? "\n" + l.body : "")));
       part.forEach((l, n) => { const v = out[n]; if (v) saveItem(S.items[l.id] || l, { suggest: v }); });
     }
-    sfx("caw"); toast("Munin has a home in mind for each rune");
+    sfx("caw"); toast("Munin picked a bin for each rune");
   } catch (e) { toast("Munin couldn't sort them this time"); render(); }
 }
-function sendRune(l, area, project, kind, last) {
+function sendRune(l, area, project, kind, last, extra, bin) {
   if (!l || !ROOMS[area] || area === "book") return;
   const el = document.querySelector(`[data-rune="${CSS.escape(l.id)}"]`);
-  const d = { ...l, area, project: project && live(S.projects[project]) ? project : "", kind: KINDS[kind] ? kind : l.kind }; delete d.suggest;
+  const d = { ...l, ...(extra || {}), area, project: project && live(S.projects[project]) ? project : "", kind: KINDS[kind] ? kind : l.kind }; delete d.suggest;
   if (d.kind === "doc" && !d.body) { d.body = d.title; }
   put("items", l.id, d);
   fly(el ? el.getBoundingClientRect() : null);
-  if (last !== false) { sfx("send"); const where = (d.project ? S.projects[d.project].name : "the " + ROOMS[area].name); toast("Munin took it to " + where, "Go there", () => go(placeOf(S.items[l.id] || d))); }
+  if (last === false) return;
+  sfx("send");
+  const where = d.project ? S.projects[d.project].name : "the " + ROOMS[area].name, there = () => go(placeOf(S.items[l.id] || d));
+  if (bin === "do") toast("A to-do in " + where, "Do it today", () => { const it = S.items[l.id]; if (it) { saveItem(it, { pick: "today" }); toast("On Today"); } });
+  else if (bin === "keep") toast("Kept in " + where, "Go there", there);
+  else if (bin === "scry") toast("Not sure yet: it waits in " + where, "Go there", there);
+  else toast("Munin took it to " + where, "Go there", there);
 }
 // Munin flies across the screen with a rune.
 function fly(from) {

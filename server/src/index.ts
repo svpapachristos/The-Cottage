@@ -2,11 +2,11 @@
 //   /mcp            the Claude connector (needs an OAuth token; see mcp.ts)
 //   /authorize      the page where Sophia lets Claude in, with her passphrase
 //   /oauth/*        token and registration endpoints (handled by the OAuth library)
-//   /api/*          the app's own API (needs her session cookie)
+//   /api/*          the app's own API (needs her session cookie), including the event log at /api/events
 //   everything else the app itself (the files in public/)
 import { OAuthProvider, AuthorizationError, CimdFetchError } from "@cloudflare/workers-oauth-provider";
 import { mcpHandler } from "./mcp";
-import { changesSince, writeDoc, writeDocs, validId, COLS, type Col } from "./db";
+import { changesSince, writeDoc, writeDocs, validId, COLS, type Col, logEvents, eventsSince } from "./db";
 import { passphraseMatches, tooManyTries, noteFailure, startSession, endSession, signedIn } from "./auth";
 import { aiJson, aiChat, firstModel } from "./ai";
 import { consentPage, messagePage } from "./pages";
@@ -51,6 +51,15 @@ async function api(req: Request, env: Env, url: URL): Promise<Response> {
     const body: any = await req.json().catch(() => ({}));
     const ops = (Array.isArray(body.ops) ? body.ops : []).filter((o: any) => COLS.includes(o.col) && validId(String(o.id))).slice(0, 200);
     return json({ rev: ops.length ? await writeDocs(env.DB, ops.map((o: any) => ({ col: o.col, id: String(o.id), data: o.data && typeof o.data === "object" ? o.data : null }))) : 0, written: ops.length });
+  }
+  if (path === "/api/events" && req.method === "POST") {   // the app's event log: what happened, never note text
+    const body: any = await req.json().catch(() => ({}));
+    return json({ logged: await logEvents(env.DB, Array.isArray(body.events) ? body.events : []) });
+  }
+  if (path === "/api/events" && req.method === "GET") {    // read it back in order, for exports and charts
+    const since = Math.max(0, Number(url.searchParams.get("since")) || 0), limit = Math.min(5000, Math.max(1, Number(url.searchParams.get("limit")) || 1000));
+    const events = await eventsSince(env.DB, since, limit);
+    return json({ events, last: events.length ? events[events.length - 1].id : since });
   }
   if (path === "/api/ai/json" && req.method === "POST") {
     const body: any = await req.json().catch(() => ({}));

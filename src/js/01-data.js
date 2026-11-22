@@ -109,9 +109,10 @@ const PREF = {   // per-device settings (sound), never synced
   set(k, v) { try { localStorage.setItem("cottage_pref_" + k, JSON.stringify(v)); } catch (e) {} },
 };
 function put(col, id, data) {
-  const body = { ...data, updated: Date.now() }; delete body.id;
+  const prev = S[col][id], body = { ...data, updated: Date.now() }; delete body.id;
   for (const k of Object.keys(body)) if (body[k] === undefined) delete body[k];
   S[col][id] = { ...body, id }; render();
+  if (col !== "meta" && !EV.quiet) changeEvents(col, prev, S[col][id]);
   if (SERVER) return serverWrite(col, id, body);
   const all = LS.get(col); all[id] = body; LS.set(col, all); return Promise.resolve();
 }
@@ -138,8 +139,8 @@ function setDone(it, done) {
 function hex(col, id, fromEl) { const o = S[col][id]; if (!o) return; toss(fromEl ? fromEl.getBoundingClientRect() : null); put(col, id, { ...o, wood: Date.now() }); toast("Hexed into firewood. It's on the woodpile", "Undo", () => unhex(col, id)); }
 function unhex(col, id) { const o = S[col][id]; if (!o) return; const d = { ...o }; delete d.wood; put(col, id, d); }
 const woodpile = () => [...Object.values(S.items).filter(i => i.wood).map(i => ({ col: "items", o: i })), ...Object.values(S.projects).filter(p => p.wood).map(p => ({ col: "projects", o: p }))].sort((a, b) => b.o.wood - a.o.wood);
-async function burnOne(col, id) { await del(col, id); S.flash.fire = Date.now(); sfx("burn"); }
-async function burnAll() { const w = woodpile(); for (const { col, o } of w) await del(col, o.id); S.flash.fire = Date.now(); sfx("burn"); return w.length; }
+async function burnOne(col, id) { logEvent("burn", S[col][id], null, col); await del(col, id); S.flash.fire = Date.now(); sfx("burn"); }
+async function burnAll() { const w = woodpile(); for (const { col, o } of w) { logEvent("burn", o, null, col); await del(col, o.id); } S.flash.fire = Date.now(); sfx("burn"); return w.length; }
 // Pages keep their old versions, so a changed plan never loses how we got here.
 function savePage(it, title, body) {
   const hist = Array.isArray(it.history) ? it.history.slice() : [];
@@ -147,8 +148,47 @@ function savePage(it, title, body) {
   saveItem(it, { title, body, history: hist.slice(0, 15), by: "Sophia" });
 }
 
+// ============================================================ the event log: what happened, never what it said
+// Every capture, sort, pick, finish, hex, burn, focus session and night closed becomes one small event: its type, when,
+// and which room, project and kind it touched, but never a note's text. Events wait in an outbox on this device and go to
+// the server's event log in batches (the dataset behind the Ledger, the spreadsheets and the Tableau dashboard).
+// In a local copy they stay on this device.
+const EV = { outbox: [], flushing: null, quiet: false, src: "" };
+function logEvent(type, o, extra, col) {
+  const ev = { cid: newId("e"), at: Date.now(), type, who: "Sophia" };
+  if (o && o.id) {
+    const isP = col === "projects" || (!col && S.projects[o.id] === o);
+    ev.ref = (isP ? "p:" : "i:") + o.id;
+    if (isP) { ev.area = o.area || ""; ev.project = o.id; } else { ev.kind = o.kind || ""; ev.area = roomOf(o); ev.project = o.project || ""; }
+  }
+  if (extra) { const x = { ...extra }; if (x.bin) { ev.bin = x.bin; delete x.bin; } for (const k of Object.keys(x)) if (x[k] === undefined || x[k] === "") delete x[k]; if (Object.keys(x).length) ev.extra = x; }
+  EV.outbox.push(ev); if (EV.outbox.length > 5000) EV.outbox.splice(0, EV.outbox.length - 5000);
+  LS.set("cottage_events", { ops: EV.outbox });
+  if (SERVER) flushEvents();
+}
+// What changed when something was saved: new things, finishes, picks for today or this week, hexes.
+function changeEvents(col, a, b) {
+  if (!a) return logEvent(col === "projects" ? "create" : "capture", b, col === "items" ? { source: EV.src || (isRune(b) ? "book" : "room") } : null, col);
+  if (!a.wood && b.wood) return logEvent("hex", b, null, col);
+  if (a.wood && !b.wood) return logEvent("unhex", b, null, col);
+  if (col !== "items") return;
+  if (!!a.done !== !!b.done && (b.kind === "todo" || b.kind === "question")) logEvent(b.done ? (b.kind === "question" ? "settle" : "finish") : "reopen", b);
+  if ((a.pick || "") !== (b.pick || "")) logEvent("pick", b, { pick: b.pick || "none" });
+}
+function flushEvents() {
+  if (EV.flushing) return EV.flushing;
+  if (!SERVER || !EV.outbox.length) return Promise.resolve();
+  EV.flushing = (async () => {
+    while (EV.outbox.length) { const batch = EV.outbox.slice(0, 200);
+      try { await apiCall("POST", "/api/events", { events: batch }); EV.outbox = EV.outbox.filter(e => !batch.includes(e)); LS.set("cottage_events", { ops: EV.outbox }); }
+      catch (e) { break; } }   // offline: they wait in the outbox and go with the next sync
+  })().finally(() => { EV.flushing = null; });
+  return EV.flushing;
+}
+
 // ============================================================ loading
 async function init() {
+  EV.outbox = LS.get("cottage_events").ops || [];
   drawIcons(); route(); tick();
   if (await serverStart()) { /* running on the Cottage server */ }
   else {
@@ -183,10 +223,11 @@ async function restore(file, status) {
     if (mops.length) await apiCall("POST", "/api/batch", { ops: mops });
     SV.rev = 0; await serverSync(); status(`Restored ${n} things.`); toast("Backup restored"); return;
   }
+  EV.quiet = true;   // restoring a backup isn't something that happened today, so it isn't logged
   for (const [col, id, v] of jobs) { if (!v || typeof v !== "object" || !/^[\w.~:@+-]{1,180}$/.test(id)) continue; await put(col, id, v); n++; status(`Restoring ${n} of ${jobs.length}...`); }
   const meta = data.meta || (data.focus ? { focus: data.focus } : {});
   for (const [k, v] of Object.entries(meta)) if (v && typeof v === "object" && /^[\w-]{1,40}$/.test(k)) await putMeta(k, v);
-  status(`Restored ${n} things.`); toast("Backup restored");
+  EV.quiet = false; status(`Restored ${n} things.`); toast("Backup restored");
 }
 
 // ---- a little message at the bottom of the screen, sometimes with a button
@@ -272,9 +313,10 @@ async function serverStart() {
   const c = LS.get("cottage_cache"); if (c && c.rev) { loadCache(c); S.ready = true; render(); }
   setupServerMunin();
   await serverSync(); flushOutbox();
-  clearInterval(SV.timer); SV.timer = setInterval(() => { if (!document.hidden) { serverSync(); flushOutbox(); } }, 12000);
-  document.addEventListener("visibilitychange", () => { if (!document.hidden) { serverSync(); flushOutbox(); } });
-  addEventListener("online", () => { S.note = ""; serverSync(); flushOutbox(); });
+  flushEvents();
+  clearInterval(SV.timer); SV.timer = setInterval(() => { if (!document.hidden) { serverSync(); flushOutbox(); flushEvents(); } }, 12000);
+  document.addEventListener("visibilitychange", () => { if (!document.hidden) { serverSync(); flushOutbox(); flushEvents(); } });
+  addEventListener("online", () => { S.note = ""; serverSync(); flushOutbox(); flushEvents(); });
   if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(() => {});
   return true;
 }

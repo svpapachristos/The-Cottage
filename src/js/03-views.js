@@ -1,12 +1,12 @@
 // ============================================================ 03 · views: what's on screen for each place in the cottage
-// Places are named in the address after "#": (nothing) = home, book, library, room-games, p-orrery, doc-<id>.
+// Places are named in the address after "#": (nothing) = home, book, library, table, road, room-games, p-orrery, doc-<id>.
 
 function route() { S.route = location.hash.replace(/^#/, ""); S.built = null; render(); window.scrollTo({ top: 0 }); }
 addEventListener("hashchange", route);
 function parseRoute(r) {
   r = r || "";
   const old = r.match(/^\/(room|p)\/(.+)$/); if (old) return old[1] === "room" ? { v: old[2] === "inbox" ? "book" : "room", id: old[2] } : { v: "p", id: decodeURIComponent(old[2]) };
-  if (r === "book" || r === "library" || r === "table") return { v: r };
+  if (r === "book" || r === "library" || r === "table" || r === "road") return { v: r };
   let m = r.match(/^room-(\w+)$/); if (m) return m[1] === "book" ? { v: "book" } : { v: "room", id: m[1] };
   m = r.match(/^p-(.+)$/); if (m) return { v: "p", id: m[1] };
   m = r.match(/^doc-(.+)$/); if (m) return { v: "doc", id: m[1] };
@@ -28,7 +28,7 @@ function draw() {
   $("banner").innerHTML = notes.map(n => `<div class="banner">${esc(n)}</div>`).join("");
   $("hdrSub").textContent = new Date().toLocaleDateString(undefined, { weekday: "long", month: "long", day: "numeric" });
   document.body.classList.toggle("night", isNight());
-  const ft = document.querySelector("footer"); if (ft) ft.textContent = SERVER ? "The Cottage: a little Hedgewitch home for everything you know and plan. Kept on your own Cottage server behind your passphrase, the same on every device, and Claude can read and add to it through your Cottage connector." : "The Cottage: a little Hedgewitch home for everything you know and plan. This local copy keeps changes on this device only; open your Cottage server to sync them.";
+  lightDoor();
   if (typing()) { S.pending = true; return; }
   if (!S.ready) { $("view").innerHTML = `<div class="empty" style="padding:40px;text-align:center">Lighting the lanterns...</div>`; return; }
   const r = parseRoute(S.route);
@@ -37,69 +37,97 @@ function draw() {
   if (r.v === "room" && ROOMS[r.id]) return vRoom(r.id);
   if (r.v === "p" && projectById(r.id)) return vProject(r.id);
   if (r.v === "table") return vTable();
+  if (r.v === "road") return vRoad();
   if (r.v === "doc" && live(S.items[r.id])) return vDoc(r.id);
   vHome();
 }
 function fresh(key, html) { const v = $("view"); if (S.built !== key) { v.innerHTML = html; v.firstElementChild && v.firstElementChild.classList.add("fade"); S.built = key; return true; } return false; }
 function crumbs(parts) { return `<div class="crumbs"><a data-go="">Cottage</a>${parts.map(([t, h]) => `<span class="sep">›</span>${h ? `<a data-go="${esc(h)}">${esc(t)}</a>` : `<span>${esc(t)}</span>`}`).join("")}</div>`; }
 
-// ============================================================ home: the cottage, Munin, today, the road
+// ============================================================ home: Munin's one line, today, a place to write, and the house
+// Home answers one question: what do I do next? So it holds only four things: Munin's line, Today (one to three),
+// a box to write anything down, and the cottage itself (tap a room to go in). Everything else is one tap deeper.
 function vHome() {
-  if (fresh("home", `<div class="home"><div class="left"><div class="house" id="house"><canvas id="hcv" width="${HW}" height="${HH}"></canvas><div id="hots"></div></div>
-      <div class="road" id="roadBox"><canvas id="rcv" width="${RW}" height="${RH}"></canvas><div id="stones"></div></div></div>
-      <div class="today" id="today"></div></div>`)) fitHouse();
-  const s = S.scale || 2;
+  if (fresh("home" + (isNight() ? ":night" : ""), `<div class="home"><div class="homecol" id="today">${homeColumn()}</div>
+      <div class="left"><div class="house" id="house"><canvas id="hcv" width="${HW}" height="${HH}"></canvas><div id="hots"></div></div>
+      <div class="houselinks"><button class="ghost" data-go="#road">${img("log")} The road</button><button class="ghost" data-go="#library">${img("library")} The library</button></div></div></div>`)) {
+    fitHouse();
+    $("homeSave").onclick = homeInscribe;
+    $("homeIn").onkeydown = e => { if (e.key === "Enter" && (e.ctrlKey || e.metaKey || !e.shiftKey && !/\n/.test($("homeIn").value) && $("homeIn").value.length < 140)) { e.preventDefault(); homeInscribe(); } };
+  }
+  $("todayBox").innerHTML = todayHTML();
+  const s = S.scale || 2, todays = new Set(items().filter(i => pickOf(i) === "today" && !i.done).map(roomOf));
   $("hots").innerHTML = Object.entries(ROOMS).map(([k, R]) => {
     const c = counts(k), [x, y, w, h] = R.r;
-    const bad = k === "book" ? (c.all ? `<span class="chipn rune">${c.all} ${c.all === 1 ? "rune" : "runes"}</span>` : "")
-      : (c.todo ? `<span class="chipn">${c.todo} to do</span>` : "") + (c.q ? `<span class="chipn q">? ${c.q}</span>` : "") + (c.fresh ? `<span class="chipn new">${c.fresh} new</span>` : "");
+    // one marker per room at most: runes waiting in the book, or a lantern where today's work lives
+    const bad = k === "book" ? (c.all ? `<span class="chipn rune">${c.all} ${c.all === 1 ? "rune" : "runes"}</span>` : "") : todays.has(k) ? `<span class="chipn new">today</span>` : "";
     return `<button class="hot" data-room="${k}" style="left:${x * s}px;top:${y * s}px;width:${w * s}px;height:${h * s}px" aria-label="${esc(R.name)}: ${esc(R.what)}"><span class="bad">${isNight() ? "" : bad}</span><span class="lab">${esc(R.name)}</span></button>`;
   }).join("");
-  // waystones you can tap, and the trail names
-  const rd = road();
-  $("stones").innerHTML = Object.keys(TRAILS).map(k => {
-    const st = rd[k] || [];
-    const labPos = TRAIL_END[k];
-    return st.map((w, n) => { const [sx, sy] = stonePos(k, n, st.length); return `<button class="stone" data-stone="${k}:${n}" title="${esc(TRAILS[k].name + ": " + w.title + (w.done ? " (reached)" : ""))}" aria-label="${esc(TRAILS[k].name + " waystone: " + w.title)}" style="left:${(sx - 4) * s}px;top:${(sy - 9) * s}px;width:${9 * s}px;height:${11 * s}px"></button>`; }).join("")
-      + `<span class="lab px" style="position:absolute;left:${Math.max(0, Math.min(RW - 30, labPos[0] - (k === "school" ? 26 : k === "games" ? 12 : 0))) * s}px;top:${(labPos[1] + (k === "games" ? -6 : 2)) * s}px;font-size:16px;color:${TRAILS[k].col};background:rgba(12,6,24,.7);padding:1px 4px 2px;border-radius:4px;pointer-events:none">${esc(TRAILS[k].name)}</span>`;
-  }).join("");
-  $("today").innerHTML = homeColumn();
+  $("homeMunin").innerHTML = muninHomeHTML();
+  $("homeRunes").innerHTML = runesLine();
 }
 function fitHouse() {
   const wide = innerWidth > 900, avail = wide ? Math.min(520, innerWidth * 0.46) : Math.min(innerWidth - 32, 520);
   S.scale = Math.max(2, Math.min(4, Math.floor(avail / HW)));
-  const s = S.scale, h = $("house"); if (!h) return;
-  h.style.width = HW * s + "px"; h.style.height = HH * s + "px";
-  const c = $("hcv"); c.style.width = HW * s + "px"; c.style.height = HH * s + "px";
-  const rb = $("roadBox"), rc = $("rcv"); rb.style.width = RW * s + "px"; rb.style.height = RH * s + "px"; rc.style.width = RW * s + "px"; rc.style.height = RH * s + "px";
+  const s = S.scale, h = $("house");
+  if (h) { h.style.width = HW * s + "px"; h.style.height = HH * s + "px"; const c = $("hcv"); c.style.width = HW * s + "px"; c.style.height = HH * s + "px"; }
+  const rb = $("roadBox"), rc = $("rcv"); if (rb) { rb.style.width = RW * s + "px"; rb.style.height = RH * s + "px"; rc.style.width = RW * s + "px"; rc.style.height = RH * s + "px"; }
 }
 let lastW = innerWidth;   // phones fire "resize" while scrolling (the address bar), so only react when the width really changes
-addEventListener("resize", () => { if (innerWidth === lastW) return; lastW = innerWidth; if ($("house")) { fitHouse(); render(); } if ($("scene")) fitScene(); });
+addEventListener("resize", () => { if (innerWidth === lastW) return; lastW = innerWidth; if ($("house") || $("roadBox")) { fitHouse(); render(); } if ($("scene")) fitScene(); });
 
+// The home column: built once, then its parts are refreshed in place (so typing in the box is never interrupted).
 function homeColumn() {
-  const all = items(), hr = new Date().getHours();
-  const todayList = all.filter(i => pickOf(i) === "today").sort((a, b) => (a.done ? 1 : 0) - (b.done ? 1 : 0) || byPinOld(a, b));
-  const weekList = all.filter(i => pickOf(i) === "week").sort((a, b) => (a.done ? 1 : 0) - (b.done ? 1 : 0) || byPinOld(a, b));
-  const qs = all.filter(openQ), fresh = all.filter(i => isNew(i) && !isRune(i)), runes = all.filter(isRune);
-  const sent = sentToday(), say = muninLine();
+  const hr = new Date().getHours(), late = hr >= 20 || hr < 4;
+  if (isNight()) return `<div id="homeMunin"></div><div id="todayBox"></div><div id="homeRunes" hidden></div><textarea id="homeIn" hidden></textarea><button id="homeSave" hidden></button>`;
+  return `<div id="homeMunin"></div>
+    <div class="card"><div id="todayBox">${todayHTML()}</div></div>
+    <div class="card capture"><label class="lbl" for="homeIn">${img("quill")} What's on your mind?</label>
+      <textarea id="homeIn" rows="2" placeholder="Anything at all: a to-do, a worry, an idea, a link. Munin will sort it."></textarea>
+      <div class="caprow"><div id="homeRunes" class="sub"></div><button class="main" id="homeSave">Write it down</button></div></div>
+    ${late ? `<button class="close-btn" data-ritual><canvas id="moonBtn" width="12" height="12"></canvas>Close up the cottage for the night</button>` : ""}`;
+}
+function muninHomeHTML() {
+  const hr = new Date().getHours(), say = muninLine();
   const hello = isNight() ? "Good night" : hr < 5 ? "Still up" : hr < 12 ? "Good morning" : hr < 18 ? "Good afternoon" : "Good evening";
-  const satchel = isNight() ? "" : [runes.length ? `<button class="pill rune" data-go="#book">${img("rune")} ${runes.length} ${runes.length === 1 ? "rune" : "runes"}</button>` : "",
-    fresh.length ? `<button class="pill new" data-satchel="new">${img("feather")} ${fresh.length} new</button>` : "",
-    qs.length ? `<button class="pill q" data-satchel="q">${img("question")} ${qs.length} waiting on you</button>` : ""].join("");
-  const greet = `<div class="munin"><canvas id="muninHome" width="16" height="16" data-munin title="Munin"></canvas><div class="bubble"><div data-say="${esc(say.act || "")}"><span class="hi">${hello}, Sophia</span>${esc(say.text)}${say.go ? `<span class="go">${esc(say.go)} ›</span>` : isNight() ? `<span class="go">Open the cottage back up ›</span>` : ""}</div>${satchel ? `<div class="satchel">${satchel}</div>` : ""}</div></div>`;
-  if (isNight()) return greet + `
-    <div class="card"><div class="lbl">${img("log")} Sent out today <span class="c">${sent.length}</span></div>${list(sent.sort(byNew).slice(0, 8), "A resting day. That counts too.", { where: true })}</div>
-    ${night().first && S.items[night().first] ? `<div class="card"><div class="lbl">${img("moon")} Tomorrow starts with</div>${list([S.items[night().first]], "", { where: true })}</div>` : ""}`;
-  const wkDone = weekList.filter(i => i.done).length, showWeek = S.open.has("home:week"), tp = tableProject(), tns = tp && nextStep(tp);
-  return greet + `
-    <button class="tablecard" data-go="#table">${tp ? `<img class="sprite" src="${objURL(tp)}" alt=""><span><span class="sub">On the rune table</span><b>${esc(tp.name)}</b><span class="sub">${esc(snip(tns ? tns.label : tp.next || "", 70))}</span></span><span class="chev">Return ›</span>` : `<span class="rt">ᚱ</span><span><b>The rune table</b><span class="sub">Set one thing down and work on just that</span></span><span class="chev">›</span>`}</button>` + `
-    <div class="card"><div class="lbl">${img("todo")} Today <span class="c">${todayList.length ? todayList.filter(i => i.done).length + " of " + todayList.length + " sent out" : ""}</span><button class="ghost r" data-plan>Plan</button></div>
-      ${list(todayList, "", { where: true, noweek: true })}
-      ${todayList.length ? "" : `<div class="empty" style="padding:2px 6px 8px">Nothing picked yet. Three small things is plenty.</div><div class="pickbar"><button class="main" data-plan>Pick today's three</button></div>`}
-      <button class="weekline" data-toggleopen="home:week"><span>This week</span><span class="sub">${weekList.length ? wkDone + " of " + weekList.length + " done" : "nothing picked"}</span><span class="chev">${showWeek ? "▴" : "▾"}</span></button>
-      ${showWeek ? list(weekList, "Pick up to five things that would make this week count.", { where: true, noweek: true }) : ""}</div>
-    ${roadAhead(sent)}
-    <button class="close-btn" data-ritual><canvas id="moonBtn" width="12" height="12"></canvas>Close up the cottage for the night</button>`;
+  return `<div class="munin"><canvas id="muninHome" width="16" height="16" data-munin title="Munin"></canvas><div class="bubble" data-say="${esc(say.act || "")}"><span class="hi">${hello}, Sophia</span>${esc(say.text)}${say.go ? `<span class="go">${esc(say.go)} ›</span>` : isNight() ? `<span class="go">Open the cottage back up ›</span>` : ""}</div></div>`;
+}
+// Today: only things to do (the Do bin), one to three of them.
+function todayHTML() {
+  const all = items(), todayList = all.filter(i => pickOf(i) === "today").sort((a, b) => (a.done ? 1 : 0) - (b.done ? 1 : 0) || byPinOld(a, b));
+  if (isNight()) { const sent = sentToday(), first = night().first && S.items[night().first];
+    return `<div class="card"><div class="lbl">${img("log")} Sent out today <span class="c">${sent.length}</span></div>${list(sent.sort(byNew).slice(0, 8), "A resting day. That counts too.", { where: true })}</div>
+      ${first ? `<div class="card"><div class="lbl">${img("moon")} Tomorrow starts with</div>${list([first], "", { where: true })}</div>` : ""}`; }
+  const left = todayList.filter(i => !i.done).length;
+  return `<div class="lbl">${img("todo")} Today <span class="c">${todayList.length ? (left ? left + " to go" : "all sent out ✦") : ""}</span><button class="ghost r" data-plan>${todayList.length ? "Change" : "Plan"}</button></div>
+    ${todayList.length ? list(todayList, "", { where: true, noweek: true, notoday: true }) : `<div class="empty" style="padding:2px 6px 8px">Nothing picked yet. One to three small things is plenty.</div><div class="pickbar"><button class="main" data-plan>Pick today's things</button></div>`}`;
+}
+function runesLine() {
+  const n = items().filter(isRune).length;
+  return n ? `<a data-go="#book">${img("rune")} ${n} ${n === 1 ? "rune waits" : "runes wait"} for you to sort ›</a>` : `Munin sorts it into the right room.`;
+}
+function homeInscribe() {
+  const t = $("homeIn").value.trim(); if (!t) { $("homeIn").focus(); return; }
+  const ids = inscribe(t, false, "home"); $("homeIn").value = ""; $("homeIn").blur();
+  pickBins(ids);
+  toast(ids.length === 1 ? "Written in the Book of Shadows" : `${ids.length} runes written in the book`, "Sort now", () => go("#book"));
+  render();
+}
+
+// ============================================================ the road: three trails out of the cottage, with their waystones
+function stonesHTML(s) {
+  const rd = road();
+  return Object.keys(TRAILS).map(k => {
+    const st = rd[k] || [], labPos = TRAIL_END[k];
+    return st.map((w, n) => { const [sx, sy] = stonePos(k, n, st.length); return `<button class="stone" data-stone="${k}:${n}" title="${esc(TRAILS[k].name + ": " + w.title + (w.done ? " (reached)" : ""))}" aria-label="${esc(TRAILS[k].name + " waystone: " + w.title)}" style="left:${(sx - 4) * s}px;top:${(sy - 9) * s}px;width:${9 * s}px;height:${11 * s}px"></button>`; }).join("")
+      + `<span class="lab px" style="position:absolute;left:${Math.max(0, Math.min(RW - 30, labPos[0] - (k === "school" ? 26 : k === "games" ? 12 : 0))) * s}px;top:${(labPos[1] + (k === "games" ? -6 : 2)) * s}px;font-size:16px;color:${TRAILS[k].col};background:rgba(12,6,24,.7);padding:1px 4px 2px;border-radius:4px;pointer-events:none">${esc(TRAILS[k].name)}</span>`;
+  }).join("");
+}
+function vRoad() {
+  if (fresh("road", `<div>${crumbs([["The road"]])}<div class="ptitle"><h2>The road</h2><span class="sub">Three trails out of the cottage. Each finished thing lights a lantern; waystones are the milestones.</span></div>
+      <div class="road" id="roadBox"><canvas id="rcv" width="${RW}" height="${RH}"></canvas><div id="stones"></div></div><div id="roadAhead" style="margin-top:14px"></div></div>`)) fitHouse();
+  $("stones").innerHTML = stonesHTML(S.scale || 2);
+  $("roadAhead").innerHTML = roadAhead(sentToday());
 }
 // The road ahead: for each trail, the next waystone and the next real step toward it.
 function roadAhead(sent) {
@@ -124,7 +152,7 @@ function itemHTML(it, o = {}) {
   const lead = it.kind === "todo" ? `<button class="chk ${it.done ? "on" : ""}" data-toggle="${esc(it.id)}" aria-label="${it.done ? "Mark not done" : "Mark done"}"></button>` : img(it.kind);
   const right = it.kind === "log" && it.date ? it.date.slice(5).replace("-", "/") : it.kind === "decision" ? fmtDate(it.created) : "";
   const open = S.open.has(it.id), pk = pickOf(it);
-  const tags = (pk === "today" ? `<span class="tag tday">today</span>` : pk === "week" && !o.noweek ? `<span class="tag twk">this week</span>` : "") + (isNew(it) ? `<span class="tag new">new</span>` : "");
+  const tags = (pk === "today" && !o.notoday ? `<span class="tag tday">today</span>` : pk === "week" && !o.noweek ? `<span class="tag twk">this week</span>` : "") + (isNew(it) ? `<span class="tag new">new</span>` : "");
   if (it.kind === "doc") return `<div class="it" data-it="${esc(it.id)}"><div class="ih" data-go="${esc(hashFor.doc(it.id))}">${lead}<div class="t">${esc(it.title)}${tags}${o.where ? `<span class="where">${esc(whereText(it))}</span>` : ""}</div><span class="m">page</span></div></div>`;
   return `<div class="it ${it.done && it.kind === "todo" ? "done" : ""} ${open ? "open" : ""}" data-it="${esc(it.id)}">
     <div class="ih" data-exp="${esc(it.id)}">${lead}<div class="t">${it.pinned ? '<span class="pin">&#9733;</span> ' : ""}${esc(it.title)}${tags}${o.where ? `<span class="where">${esc(whereText(it))}</span>` : ""}</div>${right ? `<span class="m">${esc(right)}</span>` : ""}</div>
@@ -314,37 +342,40 @@ function vBook() {
   const runes = items().filter(isRune).sort(byOld);
   const html = `<div>${crumbs([["Book of Shadows"]])}
     <canvas id="scene" class="scene" data-room="book"></canvas>
-    <div class="ptitle" style="margin-bottom:12px"><h2>Book of Shadows</h2><span class="sub">Write runes here, anything at all. Munin sorts them into the rooms.</span></div>
+    <div class="ptitle" style="margin-bottom:12px"><h2>Book of Shadows</h2><span class="sub">The one way in. Write anything; then give each rune a bin with one tap.</span></div>
     <div class="bos"><div class="leaf l"><h3>Write a rune</h3>
         <textarea id="runeIn" placeholder="A to-do, an idea, a worry, a link, a whole plan. One rune per line, or a longer one with a blank line between..."></textarea>
         <div class="btns"><span class="spacer"></span><button class="main" id="runeSave">Inscribe</button></div>
-        <div class="sub">Ctrl + Enter inscribes. Each line becomes its own rune; a block with a blank line before it stays together.</div>
+        <div class="sub">Each line becomes its own rune; a block with a blank line before it stays together. Ctrl + Enter inscribes.</div>
         <div id="bookTips" class="sub" style="margin-top:auto"></div></div>
       <div class="leaf r" id="runeLeaf"></div></div></div>`;
   if (fresh("book", html)) {
     fitScene();
-    $("runeSave").onclick = () => { const ids = inscribe($("runeIn").value); if (ids.length) { $("runeIn").value = ""; $("runeIn").blur(); S.built = "book"; renderRunes(); autoFile(ids); } };
+    $("runeSave").onclick = () => { const ids = inscribe($("runeIn").value); if (ids.length) { $("runeIn").value = ""; $("runeIn").blur(); S.built = "book"; renderRunes(); pickBins(ids); } };
     $("runeIn").onkeydown = e => { if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) $("runeSave").click(); };
   }
-  $("bookTips").innerHTML = MUNIN_AI ? (PREF.get("autofile", true) ? "Munin reads each rune as you write it. If he's sure where it belongs, he carries it there; the rest wait here with his suggestion." : "Munin reads each rune and suggests where it belongs. You can always change his mind before sending.") : S.mode === "local" ? "Munin's sorting works when The Cottage is opened from your Cottage server. You can still file runes by hand." : "";
+  $("bookTips").innerHTML = MUNIN_AI ? (PREF.get("autofile", false) ? "Munin picks a bin for each rune as you write it, and files the ones he's sure about. The rest wait here for one tap." : "Munin picks a bin for each rune as you write it. Nothing moves until you tap one.") : S.mode === "local" ? "In this local copy Munin can't read runes, so each one starts with a best guess. Tap the right bin." : "";
   renderRunes(runes);
 }
 function renderRunes(runes = items().filter(isRune).sort(byOld)) {
   const leaf = $("runeLeaf"); if (!leaf) return;
-  const sug = runes.filter(r => r.suggest);
+  const picked = runes.filter(r => r.suggest && binOf(r) !== "letgo"), unread = runes.filter(r => !r.suggest);
   leaf.innerHTML = `<h3>Waiting runes <span class="sub" style="font-family:system-ui;font-size:14px">${runes.length || ""}</span></h3>
-    <div class="btns">${runes.length && MUNIN_AI ? `<button class="main" id="sortAll">Munin, sort these</button>` : ""}${sug.length ? `<button id="sendAll">Send ${sug.length === runes.length ? "them all" : sug.length + " sorted"}</button>` : ""}</div>
+    ${runes.length ? `<div class="sub">Tap a bin to file each rune. The lit one is the best fit so far${MUNIN_AI ? ": Munin's pick once he's read it" : ""}.</div>` : ""}
+    <div class="btns">${unread.length && MUNIN_AI ? `<button class="main" id="sortAll">Munin, pick bins</button>` : ""}${picked.length > 1 ? `<button id="sendAll">File ${picked.length === runes.length ? "them all" : picked.length} as Munin picked</button>` : ""}</div>
     <div>${runes.length ? runes.map(runeHTML).join("") : `<div class="empty" style="padding:20px 4px">No runes waiting. Every thought has a home.</div>`}</div>`;
   if ($("sortAll")) $("sortAll").onclick = sortBook;
-  if ($("sendAll")) $("sendAll").onclick = () => { const list = items().filter(i => isRune(i) && i.suggest); list.forEach((l, n) => setTimeout(() => sendRune(l, l.suggest.area, l.suggest.project, l.suggest.kind, n === list.length - 1), n * 120)); };
+  if ($("sendAll")) $("sendAll").onclick = () => { const list = items().filter(i => isRune(i) && i.suggest && binOf(i) !== "letgo"); list.forEach((l, n) => setTimeout(() => fileRune(S.items[l.id], binOf(l), l.suggest.area, l.suggest.project, n === list.length - 1 ? undefined : false), n * 140)); };
 }
 function runeHTML(l) {
-  const sg = l.suggest, area = sg ? sg.area : guessArea(l.title + " " + (l.body || "")), kind = sg ? sg.kind : l.kind;
-  return `<div class="rune" data-rune="${esc(l.id)}"><div style="display:flex;gap:10px">${img(kind === "doc" ? "doc" : kind)}<div style="flex:1;min-width:0"><div class="t">${esc(l.title)}</div>${l.body ? `<div class="body sub">${esc(snip(l.body, 220))}</div>` : ""}
-    ${l.by === "Claude" ? `<div class="from">${brainBadge("claude")} wrote this in a chat; Munin carried it home</div>` : ""}
-    ${sg ? `<div class="sug">${l.by === "Claude" ? "Suggested home: " : brainBadge("hearth") + " suggests: "}${aOrAn((KINDS[sg.kind] || "note").toLowerCase())} for the ${esc((ROOMS[sg.area] || {}).name || "")}${sg.project && live(S.projects[sg.project]) ? " › " + esc(S.projects[sg.project].name) : ""}</div>` : ""}
-    <div class="file"><select data-fk aria-label="Kind">${Object.entries(KINDS).filter(([k]) => k !== "log").map(([k, n]) => `<option value="${k}" ${k === kind ? "selected" : ""}>${n}</option>`).join("")}</select><select data-fr aria-label="Room">${roomSelect(ROOMS[area] && area !== "book" ? area : "life")}</select><select data-fp aria-label="Project">${projSelect(ROOMS[area] && area !== "book" ? area : "life", sg ? sg.project : "")}</select>
-      <button class="main" data-send="${esc(l.id)}">Send</button><button data-edit="${esc(l.id)}">Edit</button><button class="ember" data-hex="items:${esc(l.id)}" title="Hex into firewood">Hex</button></div></div></div></div>`;
+  const sg = l.suggest, bin = binOf(l), area0 = sg ? sg.area : guessArea(l.title + " " + (l.body || "")), area = ROOMS[area0] && area0 !== "book" ? area0 : "life";
+  const proj = sg && sg.project && live(S.projects[sg.project]) ? S.projects[sg.project] : null, where = bin === "letgo" ? "the woodpile" : ROOMS[area].name + (proj ? " › " + proj.name : "");
+  const who = sg ? (l.by === "Claude" ? brainBadge("claude") : brainBadge("hearth")) + " picked" : "Best guess:";
+  return `<div class="rune" data-rune="${esc(l.id)}"><div class="rhead">${img(bin === "do" ? "todo" : bin === "scry" ? "question" : (sg ? sg.kind : l.kind) || "note")}<div style="flex:1;min-width:0"><div class="t">${esc(l.title)}</div>${l.body ? `<div class="body sub">${esc(snip(l.body, 220))}</div>` : ""}
+    ${l.by === "Claude" ? `<div class="from">${brainBadge("claude")} wrote this in a chat; Munin carried it home</div>` : ""}</div></div>
+    <div class="bins" role="group" aria-label="File this rune">${Object.entries(BINS).map(([k, B]) => `<button class="bin b-${k} ${k === bin ? "on" : ""}" data-bin="${esc(l.id)}:${k}"${k === bin ? ' aria-describedby="pick-' + esc(l.id) + '"' : ""}><b>${B.name}</b><span>${B.hint}</span></button>`).join("")}</div>
+    <div class="dest" id="pick-${esc(l.id)}"><span>${who} <b>${BINS[bin].name}</b>${bin === "letgo" ? "" : `, in <b>${esc(where)}</b>`}</span><button class="linkbtn" data-destedit="${esc(l.id)}">change room</button><button class="linkbtn" data-edit="${esc(l.id)}">edit</button></div>
+    <div class="file" hidden><select data-fr aria-label="Room">${roomSelect(area)}</select><select data-fp aria-label="Project">${projSelect(area, proj ? proj.id : "")}</select></div></div>`;
 }
 const aOrAn = w => (/^[aeiou]/i.test(w) ? "an " : "a ") + esc(w);
 function roomSelect(val, withBook) { return Object.entries(ROOMS).filter(([k]) => withBook || k !== "book").map(([k, R]) => `<option value="${k}" ${k === val ? "selected" : ""}>${esc(R.name)} (${esc(R.what.split(",")[0])})</option>`).join(""); }

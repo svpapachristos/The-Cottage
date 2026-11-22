@@ -51,6 +51,8 @@ document.addEventListener("click", e => {
   const ep = t.closest("[data-editproj]"); if (ep) { openProjectEdit(ep.dataset.editproj); return; }
   const at = t.closest("[data-addto]"); if (at) { const p = projectById(at.dataset.addto); openAdd({ area: p.area || "games", project: p.virtual ? "" : p.id }); return; }
   const sd = t.closest("[data-showdone]"); if (sd) { const k = "done:" + sd.dataset.showdone; S.open.has(k) ? S.open.delete(k) : S.open.add(k); S.built = null; render(); return; }
+  const bn = t.closest("[data-bin]"); if (bn) { const [id, bin] = bn.dataset.bin.split(/:(?=[^:]+$)/), l = S.items[id], box = bn.closest(".rune"); if (l && box) fileRune(l, bin, box.querySelector("[data-fr]").value, box.querySelector("[data-fp]").value); return; }
+  const de = t.closest("[data-destedit]"); if (de) { const f = de.closest(".rune").querySelector(".file"); f.hidden = !f.hidden; de.textContent = f.hidden ? "change room" : "hide"; return; }
   const sn = t.closest("[data-send]"); if (sn) { const l = S.items[sn.dataset.send], box = sn.closest(".rune"); if (l) sendRune(l, box.querySelector("[data-fr]").value, box.querySelector("[data-fp]").value, box.querySelector("[data-fk]").value); return; }
 });
 document.addEventListener("change", e => { const fr = e.target.closest("[data-fr]"); if (fr) { const box = fr.closest(".rune"); if (box) box.querySelector("[data-fp]").innerHTML = projSelect(fr.value, ""); } });
@@ -71,7 +73,12 @@ document.addEventListener("keydown", e => {
 });
 document.addEventListener("pointerdown", () => { if (PREF.get("sound", false)) audioOn(); }, { passive: true });
 document.addEventListener("mouseover", e => { const h = e.target.closest(".hot"); S.hover = h ? h.dataset.room : null; });
-$("addFab").onclick = () => openAdd(); $("muninFab").onclick = openMunin; $("searchBtn").onclick = openSearch; $("menuBtn").onclick = openMenu; $("libBtn").onclick = () => go("#library");
+$("searchBtn").onclick = openSearch; $("menuBtn").onclick = openMenu;
+// The four doors. Home is the cottage and today; Write is the Book of Shadows; Focus is the rune table; Munin opens his perch.
+document.querySelector(".doors").onclick = e => { const b = e.target.closest("[data-door]"); if (!b) return; const d = b.dataset.door; closeSheet();
+  if (d === "home") go(""); else if (d === "write") go("#book"); else if (d === "focus") go("#table"); else openMunin(); };
+function doorOf(r) { return r.v === "book" ? "write" : r.v === "table" ? "focus" : "home"; }
+function lightDoor() { const d = sheetMode === "munin" ? "munin" : doorOf(parseRoute(S.route)); document.querySelectorAll(".doors [data-door]").forEach(b => { b.classList.toggle("on", b.dataset.door === d); b.toggleAttribute("aria-current", b.dataset.door === d); }); }
 function enterRoom(k) {
   const h = $("house"), [x, y, w, hh] = ROOMS[k].r, s = S.scale;
   if (k === "life" && isNight()) { petSalem(); return; }
@@ -84,7 +91,7 @@ let lastFrame = 0;
 function tick(now = 0) {
   requestAnimationFrame(tick);
   if (now - lastFrame < 110 || document.hidden) return; lastFrame = now; const t = now / 1000;
-  drawLogo($("logo"), t); drawMuninHead($("muninFabCv"), t); if ($("signinCv")) drawLogo($("signinCv"), t);
+  drawLogo($("logo"), t); drawLogo($("doorHomeCv"), t); drawMuninHead($("muninFabCv"), t); if ($("signinCv")) drawLogo($("signinCv"), t);
   if ($("muninHome")) drawMuninBig($("muninHome"), t);
   if ($("muninBig")) drawMuninBig($("muninBig"), t);
   if ($("moonBtn") && !$("moonBtn").dataset.d) { drawMoon($("moonBtn")); $("moonBtn").dataset.d = 1; }

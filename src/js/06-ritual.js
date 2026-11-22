@@ -18,7 +18,7 @@ function drawRitual() {
     box.innerHTML = ritualFrame("Empty your head", `<div class="sub">Anything still buzzing around? Write it here and it goes into the Book of Shadows, so you don't have to hold it overnight. One thought per line.</div>
       <textarea id="ritHead" rows="6" placeholder="That bug in Orrery... email the registrar... idea for a potion shop customer..."></textarea>`,
       `<span class="spacer"></span><button id="ritCancel">Not tonight</button><button class="main" id="ritNext">Next</button>`);
-    $("ritNext").onclick = () => { const t = $("ritHead").value.trim(); if (t) { const ids = inscribe(t); if (!autoFile(ids)) toast(ids.length + (ids.length === 1 ? " rune" : " runes") + " safe in the book"); } RIT.step = 1; drawRitual(); };
+    $("ritNext").onclick = () => { const t = $("ritHead").value.trim(); if (t) { const ids = inscribe(t, false, "ritual"); if (!autoFile(ids)) toast(ids.length + (ids.length === 1 ? " rune" : " runes") + " safe in the book"); } RIT.step = 1; drawRitual(); };
     $("ritCancel").onclick = closeRitual;
     setTimeout(() => $("ritHead") && $("ritHead").focus(), 60);
   } else if (s === 1) {
@@ -63,7 +63,7 @@ function lightsOut() {
   else if (firstId && S.items[firstId]) saveItem(S.items[firstId], { pick: "today" });
   const prev = night(), key = nightKey(), yesterday = nightKey(Date.now() - 864e5);
   const streak = prev.lastNight === key ? (prev.streak || 1) : prev.lastNight === yesterday ? (prev.streak || 0) + 1 : 1;
-  putMeta("night", { closed: key, lastNight: key, closedAt: Date.now(), first: firstId || "", streak });
+  putMeta("night", { closed: key, lastNight: key, closedAt: Date.now(), first: firstId || "", streak }); logEvent("close", null, { streak, sent: sentToday().length });
   RIT.first = firstId; RIT.step = 4; S.loStart = performance.now(); drawRitual(); sfx("night");
 }
 function wake() { const n = night(); putMeta("night", { ...n, closed: "" }); S.flash.munin = Date.now(); toast("The cottage is open again"); }
