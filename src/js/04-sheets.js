@@ -107,16 +107,16 @@ function openProjectEdit(id, area) {
 
 // ---- pages: write and edit, with every old version kept
 function openDocEdit(id, ctx) {
-  const d = id ? S.items[id] : null, [ck, key] = (ctx || "room:life").split(":");
-  const area = d ? roomOf(d) : ck === "p" ? (S.projects[key].area || "games") : key, project = d ? d.project : ck === "p" ? key : "";
-  openSheet("doc", `<h3>${img("doc")} ${d ? "Edit page" : "New page"}</h3>
+  const d = id ? S.items[id] : null, [ck, key] = (ctx || "room:life").split(/:(.+)/), par = ck === "parent" ? pageOf(key) : null;
+  const area = d ? roomOf(d) : par ? roomOf(par) : ck === "p" ? (S.projects[key].area || "games") : key, project = d ? d.project : par ? par.project || "" : ck === "p" ? key : "";
+  openSheet("doc", `<h3>${img("doc")} ${d ? "Edit page" : par ? "New page inside " + esc(snip(par.title, 40)) : "New page"}</h3>
     <label>Title<input type="text" id="dTitle" value="${esc(d ? d.title : "")}" placeholder="Plan, roadmap, brief, notes..."></label>
     <label>Page <span>Headings start with #, lists with -, tables with |. ${d ? "The old version is kept." : ""}</span><textarea id="dBody" class="big" placeholder="# A heading&#10;&#10;Write the page here.">${esc(d ? d.body || "" : "")}</textarea></label>
     <div class="btns"><button class="main" id="dSave">${d ? "Save page" : "Add page"}</button><button id="dCancel">Cancel</button></div>`, true);
   $("dSave").onclick = () => {
     const title = $("dTitle").value.trim() || "Untitled page", body = $("dBody").value.replace(/\s+$/, "");
     if (d) { savePage(d, title, body); closeSheet(); toast("Page saved"); return; }
-    const nid = newId("doc"); put("items", nid, { kind: "doc", title, body, area, project: project || "", link: "", done: false, pinned: false, created: Date.now(), by: "Sophia" }); closeSheet(); sfx("rune"); go(hashFor.doc(nid));
+    const nid = newId("doc"); put("items", nid, { kind: "doc", title, body, area, project: project || "", ...(par ? { parent: par.id } : {}), link: "", done: false, pinned: false, created: Date.now(), by: "Sophia" }); closeSheet(); sfx("rune"); go(hashFor.doc(nid));
   };
   $("dCancel").onclick = closeSheet;
   setTimeout(() => $(d ? "dBody" : "dTitle").focus(), 50);

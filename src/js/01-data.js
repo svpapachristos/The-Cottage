@@ -93,6 +93,12 @@ function counts(area) {
 function trailOf(p) { return p.trail || AREA_TRAIL[p.area] || ""; }
 function whereText(it) { const p = projOf(it); const R = ROOMS[roomOf(it)]; return p ? R.name + " › " + p.name : R.name; }
 
+// ---- the library of layers: a page can sit inside another page (a chapter), as deep as needed
+const pageOf = id => { const d = id && S.items[id]; return live(d) && d.kind === "doc" ? d : null; };
+const topPage = d => !pageOf(d.parent) || d.parent === d.id;                 // a page with no (living) page above it
+function parentsOf(d) { const out = [], seen = new Set([d.id]); let cur = d; while (cur.parent && !seen.has(cur.parent) && pageOf(cur.parent)) { cur = S.items[cur.parent]; seen.add(cur.id); out.unshift(cur); } return out; }
+const childPages = d => items().filter(i => i.kind === "doc" && i.parent === d.id && i.id !== d.id);
+
 // ---- sorting
 const byOld = (a, b) => (a.created || 0) - (b.created || 0);
 const byNew = (a, b) => (b.updated || b.created || 0) - (a.updated || a.created || 0);

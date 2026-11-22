@@ -13,6 +13,7 @@ It runs on my own Cloudflare Worker with a SQL database, installs as an app on m
 - **The Book of Shadows: one way in, four bins.** Write anything, from the home screen or the book. Munin pre-picks a bin for each rune (**Do**, **Keep**, **Not sure yet**, **Let go**) and a room, and one tap files it. A **Do** can go straight onto Today.
 - **Today and the road.** Today holds only to-dos: pick one to three. Each finished thing lights a lantern on the road out of the cottage, which forks into three trails (Job, Games, School) with milestones called waystones.
 - **The rune table.** Set down one project and work on just that, with a focus candle and a jot box for stray thoughts.
+- **A library of layers.** Pages can hold pages: a project is a book, with chapters, then pages explaining each piece in plain words, down to links into the real code. A trail at the top always shows where you are. The first book explains the Cottage itself.
 - **Nothing is deleted by accident.** Hexing something turns it into a named log on the woodpile. It's only gone when I drag the log into the fire, or burn the pile in the night ritual.
 - **The night ritual.** Empty your head, see what you sent out, feed the fire, pick tomorrow's first thing, lights out. Salem the cat curls up by the hearth.
 
@@ -50,7 +51,7 @@ A badge shows which brain is answering, wherever Munin speaks:
   - `db.ts`, `schema.sql`: one `docs` table stores every document as JSON. The fields I query (`kind`, `area`, `project`, `done`, `wood`, `updated`) are generated columns with indexes, so it's flexible like a document store but queryable like SQL. A single `rev` counter rises with every write, so each device asks "what changed since N?" and syncs incrementally. Deletes are kept as tombstones so other devices hear about them.
   - **The event log** (`events` table, `/api/events`): one append-only row for every capture, sort, pick, finish, hex, burn, focus session and night closed, from the app and from Claude's connector. It records what happened, when, and which room, project and kind it touched, but never a note's text, so it's safe to chart in public. Sort events also record Munin's pick, so his accuracy can be measured. Each device gives every event its own id, so a resend after a dropped connection is never counted twice.
   - `auth.ts`: passphrase sign-in with rate limiting and a session cookie.
-  - `mcp.ts`: an MCP server, so Claude can read and write the Cottage from any chat.
+  - `mcp.ts`: an MCP server, so Claude can read and write the Cottage from any chat. `cottage_recent` tells Claude what I wrote and did in a time window, with times in my time zone, read from the notes and the event log.
   - `ai.ts`: Munin's Hearth brain; every answer reports which model gave it.
 - **Offline first:** changes are queued in an outbox on the device and sent when the connection returns. The service worker keeps the app shell (never the notes) so it opens instantly.
 

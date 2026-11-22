@@ -79,3 +79,9 @@ export async function eventsSince(db: D1Database, sinceId: number, limit: number
   const rows = await db.prepare("SELECT id, at, type, who, ref, kind, area, project, bin, extra FROM events WHERE id > ?1 ORDER BY id LIMIT ?2").bind(sinceId, limit).all();
   return (rows.results as any[]).map(r => ({ ...r, extra: r.extra ? JSON.parse(r.extra) : null }));
 }
+// Events from a moment onward, oldest first (for "what happened since...").
+export async function eventsFrom(db: D1Database, fromMs: number, limit = 500) {
+  await ensureSchema(db);
+  const rows = await db.prepare("SELECT id, at, type, who, ref, kind, area, project, bin, extra FROM events WHERE at >= ?1 ORDER BY at LIMIT ?2").bind(fromMs, limit).all();
+  return (rows.results as any[]).map(r => ({ ...r, extra: r.extra ? JSON.parse(r.extra) : null }));
+}

@@ -192,7 +192,7 @@ function pagesHTML(docs, ctx) {
   const add = `<button class="ghost" data-newdoc="${esc(ctx)}">+ New page</button>`;
   return `<h3 class="sec">${img("doc")} Pages <span class="r">${add}</span></h3>${docs.length ? `<div class="pages">${docs.map(pageCard).join("")}</div>` : `<div class="empty">Plans, roadmaps, briefs and long notes live here, and keep every old version. Nothing here yet.</div>`}`;
 }
-function pageCard(d) { return `<div class="pagecard" data-go="${esc(hashFor.doc(d.id))}"><div class="n">${d.pinned ? '<span class="pin">&#9733;</span> ' : ""}${esc(d.title)}${isNew(d) ? `<span class="tag new">new</span>` : ""}</div><div class="s">${esc(snip(d.body, 160))}</div><div class="w">${(d.history || []).length ? (d.history.length + 1) + " versions · " : ""}updated ${fmtDate(d.updated || d.created)}</div></div>`; }
+function pageCard(d) { return `<div class="pagecard" data-go="${esc(hashFor.doc(d.id))}"><div class="n">${d.pinned ? '<span class="pin">&#9733;</span> ' : ""}${esc(d.title)}${isNew(d) ? `<span class="tag new">new</span>` : ""}</div><div class="s">${esc(snip(d.body, 160))}</div><div class="w">${childPages(d).length ? `<b class="inn">${childPages(d).length} ${childPages(d).length === 1 ? "page" : "pages"} inside</b> · ` : ""}${(d.history || []).length ? (d.history.length + 1) + " versions · " : ""}updated ${fmtDate(d.updated || d.created)}</div></div>`; }
 const byPage = (a, b) => (b.pinned ? 1 : 0) - (a.pinned ? 1 : 0) || byNew(a, b);
 
 // ============================================================ a room
@@ -201,7 +201,7 @@ function vRoom(area) {
   const R = ROOMS[area], c = counts(area);
   const ps = projects().filter(p => (p.area || "games") === area);
   const roomItems = items().filter(i => roomOf(i) === area && !projOf(i));
-  const docs = roomItems.filter(i => i.kind === "doc").sort(byPage), loose = roomItems.filter(i => i.kind !== "doc");
+  const docs = roomItems.filter(i => i.kind === "doc" && topPage(i)).sort(byPage), loose = roomItems.filter(i => i.kind !== "doc");
   const scene = area === "life" ? `<div class="fireplace big" id="hearthFire"><canvas id="scene" class="scene" data-room="life"></canvas><div class="logs" id="hearthLogs"></div></div>` : `<canvas id="scene" class="scene" data-room="${area}"></canvas>`;
   const html = `<div>${crumbs([[R.name]])}
     ${scene}
@@ -253,7 +253,7 @@ function fitScene() {
 // ============================================================ a project, picked up and held in your hands
 function vProject(id) {
   const p = projectById(id), area = p.area || "games", R = ROOMS[area] || ROOMS.games, ctx = p.virtual ? "room:" + area : "p:" + id;
-  const its = itemsOf(p), docs = its.filter(i => i.kind === "doc").sort(byPage), rest = its.filter(i => i.kind !== "doc");
+  const its = itemsOf(p), docs = its.filter(i => i.kind === "doc" && topPage(i)).sort(byPage), rest = its.filter(i => i.kind !== "doc");
   const tr = trailOf(p), th = threadOf(p), ns = nextStep(p), ties = tiesOf(p), qs = rest.filter(openQ);
   $("view").innerHTML = `<div class="${S.built === "p:" + id ? "" : "fade"}">${crumbs([[R.name, hashFor.room(area)], [p.name]])}
     <div class="held">
@@ -309,12 +309,14 @@ const tieChip = pid => r => {
 // ============================================================ a page (plan, roadmap, brief, long notes)
 function vDoc(id) {
   const d = S.items[id], p = projOf(d), area = roomOf(d), R = ROOMS[area];
-  const parts = [[R.name, hashFor.room(area)]]; if (p) parts.push([p.name, hashFor.p(p.id)]); parts.push([d.title]);
+  const parts = [[R.name, hashFor.room(area)]]; if (p) parts.push([p.name, hashFor.p(p.id)]); for (const up of parentsOf(d)) parts.push([up.title, hashFor.doc(up.id)]); parts.push([d.title]);
+  const kids = childPages(d).sort(byPage);
   const v = S.docVersion && S.docVersion.id === id ? S.docVersion.n : -1, shown = v >= 0 && d.history && d.history[v] ? d.history[v] : null;
   $("view").innerHTML = `<div class="${S.built === "doc:" + id ? "" : "fade"}">${crumbs(parts)}
     <div class="grim"><div class="gh"><h2>${esc(shown ? shown.title : d.title)}</h2>${isNew(d) ? `<span class="tag new">new from Munin</span>` : ""}</div>
       ${shown ? `<div class="banner">You're reading an older version from ${fmtDate(shown.at)}. <button class="ghost" data-docver="-1">Back to the current page</button> <button data-restorever="${v}">Bring this version back</button></div>` : ""}
       <div class="doc">${mdDoc(shown ? shown.body : d.body)}</div>
+      ${kids.length || !shown ? `<div class="inside"><h3 class="sec">${img("doc")} ${kids.length ? "Inside this page" : "Pages inside"}</h3>${kids.length ? `<div class="pages">${kids.map(pageCard).join("")}</div>` : `<div class="sub">A page can hold pages: chapters of a project, then the pieces of each chapter.</div>`}<div class="btns" style="margin-top:8px"><button data-newdoc="parent:${esc(id)}">+ New page inside this one</button></div></div>` : ""}
       <div class="ibm" style="margin-top:18px">${d.created ? "Written " + fmtDate(d.created) + (d.by === "Claude" ? " by Claude in a chat" : "") : ""}${d.updated ? " · updated " + fmtDate(d.updated) : ""}${d.link ? ` · <a href="${esc(safeUrl(d.link))}" target="_blank" rel="noopener" style="color:var(--lilac)">source</a>` : ""}</div>
       <div class="btns" style="margin-top:8px"><button class="main" data-editdoc="${esc(id)}">Edit page</button><button data-edit="${esc(id)}">Move or rename</button><button data-pin="${esc(id)}">${d.pinned ? "Unpin" : "Pin"}</button>${(d.history || []).length ? `<button data-dochist="${esc(id)}">${d.history.length} older ${d.history.length === 1 ? "version" : "versions"}</button>` : ""}<span class="spacer"></span><button class="ember" data-hex="items:${esc(id)}">Hex into firewood</button></div></div></div>`;
   S.built = "doc:" + id;
