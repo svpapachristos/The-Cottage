@@ -524,6 +524,32 @@ body.reading .reader { display: block; position: fixed; left: 0; right: 0; botto
   .crumbs .closer, .cont { display: none; }
   .crumbs .home-a { display: inline; }
 }
+
+/* ===== grain 0 (22 Nov 2026): read and write only. Plain lists, one quill, one "…" menu. ===== */
+.hot .bad { display: none; }
+.rtitle0 { font-size: 36px; margin: 6px 0 14px; line-height: .95; font-weight: 400; }
+.titlerow { display: flex; align-items: flex-start; gap: 10px; } .titlerow .rtitle0 { flex: 1; min-width: 0; }
+.morebtn { flex: none; width: 44px; height: 44px; border-radius: 10px; font-size: 22px; line-height: 1; color: var(--dim); background: var(--panel2); margin-top: 4px; }
+.list0 { display: flex; flex-direction: column; border-top: 1px solid var(--line); }
+.list0.kids { margin-top: 18px; }
+.row0 { display: flex; align-items: center; gap: 10px; width: 100%; text-align: left; min-height: 54px; padding: 12px 6px; background: none; border: none; border-bottom: 1px solid var(--line); border-radius: 0; font-size: 16px; color: var(--text); }
+.row0:hover { background: rgba(220,90,255,.07); }
+.row0 .rt { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+.row0 .rs { font-size: 12.5px; color: var(--dim); }
+.row0 .chev { color: var(--dim); font-size: 20px; }
+.notes0 { margin-top: 22px; display: flex; flex-direction: column; gap: 8px; }
+.note0 { background: #1d1530; border: 1.5px solid var(--line); border-radius: 12px; padding: 10px 12px 6px; font-size: 15px; }
+.note0 p { margin: 0 0 4px; }
+.nsm { background: none; border: none; padding: 4px 0; min-height: 0; font-size: 12px; color: var(--dim); }
+.writenote { margin-top: 18px; min-height: 46px; padding: 0 18px; border-radius: 12px; border: 1.5px dashed #4a3570; background: none; color: var(--pink); font-size: 15px; }
+.quillfab { position: fixed; right: 18px; bottom: calc(18px + env(safe-area-inset-bottom)); z-index: 19; display: flex; align-items: center; gap: 8px; min-height: 52px; padding: 0 18px 0 12px; border-radius: 999px; background: var(--pink); color: #1a0b24; font-weight: 600; font-size: 15px; border: none; box-shadow: 0 6px 20px rgba(0,0,0,.45); }
+.quillfab img { width: 28px; height: 28px; image-rendering: pixelated; }
+.menu0 { display: flex; flex-direction: column; gap: 8px; } .menu0 button { min-height: 48px; text-align: left; padding: 0 14px; font-size: 15px; }
+.menu0 .ember { color: var(--ember); }
+.qrow { display: flex; justify-content: flex-end; gap: 8px; margin-top: 12px; }
+#qText { font-size: 16px; }
+body.reading .reader { padding-bottom: 96px; }
+@media (min-width: 900px) { .reader, body.reading .reader { padding-bottom: 96px; } }
 </style>
 </head>
 <body>
@@ -1761,12 +1787,12 @@ function mdDoc(src) {   // full pages: headings, lists, tables, quotes, code, ch
   return out.join("");
 }
 
-// ============================================================ the walk (22 Nov 2026 blueprint): the cottage, and a book open beside it
-// Three places only: the cottage (always there), a room's shelf of books, and a book or page open in the reader.
-// On a wide screen the reader sits beside the cottage like a book open at the hearth; on a phone it slides up over it.
-// Few words until the cogs: the cottage has almost none, a room only its books' names, a book its sentence and
-// chapters, and a page the full explanation.
-// (The older screens below — vHome, vRoom, vProject, vDoc, vLibrary, vRoad — are parked, not deleted.)
+// ============================================================ the walk, grain 0 (22 Nov 2026): read and write only
+// The house with its room names; a room is a plain list of books; a book is a plain list of pages; a page is its text
+// and its notes. One quill in the corner writes anything into the Book of Shadows; a page has "Write a note"; the
+// rest of the actions live in one "…" menu. Everything else is hidden for now (data kept), and comes back one grain
+// at a time. On a wide screen the reader sits beside the house; on a phone it slides up over it.
+// (The older screens above — vHome, vRoom, vProject, vDoc, vLibrary, vRoad, vBook — are parked, not deleted.)
 const wideScreen = () => innerWidth >= 900;
 function placeLive(r) {
   if (r.v === "room") return !!ROOMS[r.id];
@@ -1777,126 +1803,100 @@ function placeLive(r) {
 function walkShell() {
   if ($("walk")) return;
   $("view").innerHTML = `<div class="walk" id="walk">
-    <section class="cot" id="cot" aria-label="The cottage">
-      <div id="cotMunin"></div>
-      <div class="house" id="house"><canvas id="hcv" width="${HW}" height="${HH}"></canvas><div id="hots"></div></div>
-      <div id="cotCont"></div>
-      <div class="quill"><label class="px" for="homeIn">Write anything</label>
-        <textarea id="homeIn" rows="2" placeholder="A thought, a to-do, an idea. Munin will sort it."></textarea>
-        <div class="caprow"><span id="homeRunes" class="sub"></span><button class="main" id="homeSave">Write it down</button></div></div>
-    </section>
-    <section class="reader" id="reader" aria-label="The open book"></section></div>`;
+    <section class="cot" id="cot" aria-label="The cottage"><div class="house" id="house"><canvas id="hcv" width="${HW}" height="${HH}"></canvas><div id="hots"></div></div></section>
+    <section class="reader" id="reader" aria-label="The open book"></section></div>
+    <button class="quillfab" data-quill="" aria-label="Write anything"><img src="${icon("quill")}" alt=""><span>Write</span></button>`;
   S.built = null; fitHouse();
-  $("homeSave").onclick = homeInscribe;
-  $("homeIn").onkeydown = e => { if (e.key === "Enter" && (e.ctrlKey || e.metaKey || !e.shiftKey && !/\n/.test($("homeIn").value) && $("homeIn").value.length < 140)) { e.preventDefault(); homeInscribe(); } };
 }
 function areaOfRoute(r) { return r.v === "room" ? r.id : r.v === "book" ? "book" : r.v === "p" ? (projectById(r.id) || {}).area : r.v === "doc" ? roomOf(S.items[r.id]) : ""; }
 function drawCottage(r) {
-  const s = S.scale || 2, here = areaOfRoute(r), newOnes = items().filter(i => isNew(i) && !isRune(i)), runes = items().filter(isRune);
-  const newBy = {}; for (const i of newOnes) { const k = roomOf(i); newBy[k] = (newBy[k] || 0) + 1; }
-  $("hots").innerHTML = Object.entries(ROOMS).map(([k, R]) => {
-    const [x, y, w, h] = R.r, n = k === "book" ? runes.length : newBy[k] || 0;
-    // one small marker at most: runes waiting in the book, or how many new things Claude left in that room
-    const bad = n ? `<span class="chipn ${k === "book" ? "rune" : "new"}">${n}</span>` : "";
-    return `<button class="hot${k === here ? " on" : ""}" data-room="${k}" style="left:${x * s}px;top:${y * s}px;width:${w * s}px;height:${h * s}px" aria-label="${esc(R.name)}${n ? ", " + n + (k === "book" ? " runes waiting" : " new") : ""}"><span class="bad">${bad}</span><span class="lab">${esc(R.name)}</span></button>`;
-  }).join("");
-  const hr = new Date().getHours(), hello = hr < 5 ? "Still up" : hr < 12 ? "Good morning" : hr < 18 ? "Good afternoon" : "Good evening";
-  const newest = newOnes.sort(byNew)[0];
-  const say = newest ? { t: `Claude left ${newOnes.length} new ${newOnes.length === 1 ? "thing" : "things"} for you.`, go: placeOf(newest) }
-    : runes.length ? { t: `${runes.length} ${runes.length === 1 ? "rune waits" : "runes wait"} in the Book of Shadows.`, go: "#book" } : { t: "The fire's going.", go: "" };
-  $("cotMunin").innerHTML = `<button class="munin munbtn" data-go="${esc(say.go)}"><canvas id="muninHome" width="16" height="16" aria-hidden="true"></canvas><span class="bubble"><span class="hi">${hello}, Sophia</span>${esc(say.t)}</span></button>`;
-  const last = parseRoute(PREF.get("lastPlace", "")), lastT = last.v === "doc" && placeLive(last) ? S.items[last.id].title : last.v === "p" && placeLive(last) ? projectById(last.id).name : "";
-  $("cotCont").innerHTML = r.v === "home" && lastT ? `<button class="cont" data-go="#${esc(PREF.get("lastPlace", ""))}">Keep reading: <b>${esc(snip(lastT, 46))}</b> ›</button>` : "";
-  $("homeRunes").innerHTML = runesLine();
+  const s = S.scale || 2, here = areaOfRoute(r);
+  $("hots").innerHTML = Object.entries(ROOMS).map(([k, R]) => { const [x, y, w, h] = R.r;
+    return `<button class="hot${k === here ? " on" : ""}" data-room="${k}" style="left:${x * s}px;top:${y * s}px;width:${w * s}px;height:${h * s}px" aria-label="${esc(R.name)}"><span class="lab">${esc(R.name)}</span></button>`; }).join("");
 }
 function drawReader(rr) {
   const el = $("reader");
-  if (rr.v === "home") { if (S.built !== "rhome") { el.innerHTML = `<div class="rhint fade"><div class="px">Pick a room</div><div class="sub">Each room holds its books. Tap one in the cottage.</div></div>`; S.built = "rhome"; } return; }
-  if (rr.v === "room") return rRoom(rr.id);
-  if (rr.v === "book") return vBook();
+  if (rr.v === "home") { if (S.built !== "rhome") { el.innerHTML = `<div class="rhint fade"><div class="px">Pick a room</div></div>`; S.built = "rhome"; } return; }
+  if (rr.v === "room") return rr.id === "book" ? rShadows() : rRoom(rr.id);
+  if (rr.v === "book") return rShadows();
   if (rr.v === "p") return rBook(rr.id);
   if (rr.v === "doc") return rPage(rr.id);
 }
+function readerPaint(key, html) {
+  const el = $("reader"), first = S.built !== key;
+  el.innerHTML = `<div class="${first ? "fade" : ""}">${html}</div>`;
+  if (first) { if (!wideScreen()) el.scrollTop = 0; else window.scrollTo({ top: 0 }); }
+  S.built = key;
+}
+const rowGo = (go, label, sub) => `<button class="row0" data-go="${esc(go)}"><span class="rt">${esc(label)}${sub ? `<span class="rs">${esc(sub)}</span>` : ""}</span><span class="chev" aria-hidden="true">›</span></button>`;
+const moreBtn = (what, id) => `<button class="morebtn" data-more="${what}:${esc(id)}" aria-label="More">…</button>`;
 
-// ---- a room: its scene, and its shelf of books (just their names)
+// ---- a room: a plain list of its books
 function rRoom(area) {
-  if (area === "book") return vBook();
   const R = ROOMS[area];
-  const scene = area === "life" ? `<div class="fireplace big" id="hearthFire"><canvas id="scene" class="scene" data-room="life"></canvas><div class="logs" id="hearthLogs"></div></div>` : `<canvas id="scene" class="scene" data-room="${area}"></canvas>`;
-  if (fresh("room:" + area, `<div>${crumbs([[R.name]])}<div class="roomtop">${scene}</div><h2 class="px rtitle">${esc(R.name)}</h2><div id="shelf"></div><div id="roomExtra"></div></div>`)) fitScene();
   const ps = projects().filter(p => (p.area || "games") === area).sort((a, b) => (a.order ?? 99) - (b.order ?? 99));
   const loose = items().filter(i => i.kind === "doc" && roomOf(i) === area && !projOf(i) && topPage(i)).sort(byPage);
   const basket = basketOf(area), inBasket = itemsOf(basket).filter(i => i.kind !== "doc").length;
-  $("shelf").innerHTML = `<div class="shelf">${ps.map(bookTile).join("")}${loose.map(pageTile).join("")}${inBasket ? bookTile(basket) : ""}
-    <button class="btile add" data-newproj="${area}"><span class="plus" aria-hidden="true">+</span><span class="n">New book</span></button></div>`;
-  if (area === "life") {
-    const wood = woodpile();
-    $("hearthLogs").innerHTML = logsHTML(wood); wireFireplace("hearthFire");
-    $("roomExtra").innerHTML = wood.length ? `<details class="woodlist"${S.open.has("woodlist") ? " open" : ""}><summary data-toggleopen="woodlist">The woodpile (${wood.length})</summary>
-      <div class="sub" style="margin:6px 0">Drag a log into the fire to burn it for good, or pull it back off the pile.</div>
-      ${wood.map(({ col, o }) => `<div class="res" style="cursor:default"><img src="${col === "projects" ? objURL(o) : icon(o.kind || "note")}" alt=""><div style="flex:1;min-width:0"><div class="t">${esc(o.title || o.name)}</div><div class="w">hexed ${fmtDate(o.wood)}</div></div><button data-unhex="${col}:${esc(o.id)}">Pull it off</button><button class="ember" data-burnone="${col}:${esc(o.id)}" aria-label="Burn ${esc(o.title || o.name)}">Burn</button></div>`).join("")}</details>` : "";
-  } else $("roomExtra").innerHTML = "";
+  const rows = [...ps.map(p => rowGo(hashFor.p(p.id), p.name)), ...loose.map(d => rowGo(hashFor.doc(d.id), d.title)), ...(inBasket ? [rowGo(hashFor.p(basket.id), basket.name)] : [])];
+  readerPaint("room:" + area, `${crumbs([[R.name]])}<h2 class="px rtitle0">${esc(R.name)}</h2><div class="list0">${rows.join("") || `<div class="empty">Nothing on these shelves yet.</div>`}</div>`);
 }
-const newDot = o => isNew(o) ? `<span class="dot" title="New from Claude" aria-label="new"></span>` : "";
-function bookTile(p) {
-  const anyNew = itemsOf(p).some(isNew);
-  return `<button class="btile" data-proj="${esc(p.id)}"><img class="sprite" src="${objURL(p)}" alt=""><span class="n">${esc(p.name)}</span>${anyNew ? `<span class="dot" aria-label="new"></span>` : ""}</button>`;
-}
-function pageTile(d) { return `<button class="btile" data-go="${esc(hashFor.doc(d.id))}"><img class="sprite" src="${icon("doc")}" alt=""><span class="n">${esc(snip(d.title, 40))}</span>${newDot(d)}</button>`; }
-function chapRow(d) {
-  const kids = childPages(d).length, notes = notesOn(d).length;
-  const meta = [kids ? `${kids} inside` : "", notes ? `${notes} ${notes === 1 ? "note" : "notes"}` : ""].filter(Boolean).join(" · ");
-  return `<button class="chap" data-go="${esc(hashFor.doc(d.id))}"><span class="ct">${esc(d.title)}${meta ? `<span class="cm">${meta}</span>` : ""}</span>${d.understood ? `<span class="got" title="You get this" aria-label="understood">✓</span>` : ""}${newDot(d)}<span class="chev" aria-hidden="true">›</span></button>`;
-}
-
-// ---- a book: its cover (one sentence), one next step, and its chapters. Notes tucked inside stay folded away.
+// ---- a book: a plain list of its pages
 function rBook(id) {
-  const p = projectById(id), area = p.area || "games", R = ROOMS[area] || ROOMS.games, ctx = p.virtual ? "room:" + area : "p:" + id;
-  const its = itemsOf(p);
-  const chapters = its.filter(i => i.kind === "doc" && topPage(i)).sort((a, b) => (b.pinned ? 1 : 0) - (a.pinned ? 1 : 0) || byChapter(a, b));
-  const slips = its.filter(i => i.kind !== "doc" && !pageOf(i.parent)).sort(byNew);
-  const ns = p.virtual ? null : nextStep(p), nextTxt = ns && ns.kind !== "stone" ? ns.label : (p.next || "");
-  const open = S.open.has("slips:" + id) || slips.some(i => S.open.has(i.id));
-  $("reader").innerHTML = `<div class="${S.built === "p:" + id ? "" : "fade"}">${crumbs([[R.name, hashFor.room(area)], [p.name]])}
-    <div class="cover"><img class="sprite big" src="${objURL(p)}" alt=""><div style="min-width:0"><h2 class="px">${esc(p.name)}</h2>${p.status ? `<div class="sentence">${esc(snip(p.status, 170))}</div>` : ""}</div></div>
-    ${nextTxt ? `<div class="nextline"><span class="k">Next</span><span>${esc(nextTxt)}</span></div>` : ""}
-    ${p.link ? `<div style="margin:2px 0 10px"><a class="play" href="${esc(safeUrl(p.link))}" target="_blank" rel="noopener">${esc(p.linkLabel || "Open")}</a></div>` : ""}
-    <div class="chapters">${chapters.length ? chapters.map(chapRow).join("") : `<div class="empty">No pages in this book yet. Claude writes them as you build.</div>`}</div>
-    ${slips.length ? `<button class="slipsbtn" data-toggleopen="slips:${esc(id)}" aria-expanded="${open}">${slips.length} ${slips.length === 1 ? "note" : "notes"} tucked in this book <span aria-hidden="true">${open ? "▴" : "▾"}</span></button>${open ? `<div class="slips">${list(slips, "")}</div>` : ""}` : ""}
-    <form class="notebox" data-booknote="${esc(id)}"><input type="text" placeholder="Write a note in this book..." aria-label="Write a note in this book"><button type="submit">Add</button></form>
-    <div class="tinyacts"><button class="ghost" data-newdoc="${esc(ctx)}">+ New page</button>${p.virtual ? "" : `<button class="ghost" data-editproj="${esc(id)}">Edit book</button>`}</div></div>`;
-  S.built = "p:" + id;
+  const p = projectById(id), area = p.area || "games", R = ROOMS[area] || ROOMS.games;
+  const pages = itemsOf(p).filter(i => i.kind === "doc" && topPage(i)).sort((a, b) => (b.pinned ? 1 : 0) - (a.pinned ? 1 : 0) || byChapter(a, b));
+  const loose = p.virtual ? itemsOf(p).filter(i => i.kind !== "doc").sort(byNew) : [];
+  readerPaint("p:" + id, `${crumbs([[R.name, hashFor.room(area)], [p.name]])}<div class="titlerow"><h2 class="px rtitle0">${esc(p.name)}</h2>${p.virtual ? "" : moreBtn("p", id)}</div>
+    <div class="list0">${pages.map(d => rowGo(hashFor.doc(d.id), d.title)).join("")}${loose.map(i => `<button class="row0" data-edit="${esc(i.id)}"><span class="rt">${esc(i.title)}</span></button>`).join("")}${pages.length || loose.length ? "" : `<div class="empty">No pages in this book yet.</div>`}</div>`);
 }
-
-// ---- a page: read it, write in its margin, mark it understood, turn to the next one
+// ---- a page: its text, the pages inside it, and your notes
 function rPage(id) {
   const d = S.items[id], p = projOf(d), area = roomOf(d), R = ROOMS[area];
   const parts = [[R.name, hashFor.room(area)]]; if (p) parts.push([p.name, hashFor.p(p.id)]); for (const up of parentsOf(d)) parts.push([up.title, hashFor.doc(up.id)]); parts.push([d.title]);
   const kids = childPages(d).sort(byChapter), notes = notesOn(d);
-  const par = d.parent && d.parent !== d.id && pageOf(d.parent) ? S.items[d.parent] : null;
-  const sibs = par ? childPages(par).sort(byChapter) : items().filter(i => i.kind === "doc" && topPage(i) && (i.project || "") === (d.project || "") && roomOf(i) === area).sort((a, b) => (b.pinned ? 1 : 0) - (a.pinned ? 1 : 0) || byChapter(a, b));
-  const k = sibs.findIndex(x => x.id === id), prev = k > 0 ? sibs[k - 1] : null, next = k >= 0 ? sibs[k + 1] : null;
   const v = S.docVersion && S.docVersion.id === id ? S.docVersion.n : -1, shown = v >= 0 && d.history && d.history[v] ? d.history[v] : null;
-  $("reader").innerHTML = `<div class="${S.built === "doc:" + id ? "" : "fade"}">${crumbs(parts)}
-    <article class="leaf-page">
-      <h2 class="px ptitle2">${esc(shown ? shown.title : d.title)}</h2>
-      <div class="pmeta">${d.by === "Claude" ? "Written by Claude" : "Written by you"}${d.updated ? " · updated " + fmtDate(d.updated) : ""}${isNew(d) ? ` <span class="tag new">new</span>` : ""}</div>
-      ${shown ? `<div class="banner">You're reading an older version from ${fmtDate(shown.at)}. <button class="ghost" data-docver="-1">Back to the current page</button> <button data-restorever="${v}">Bring this version back</button></div>` : ""}
-      <div class="doc">${mdDoc(shown ? shown.body : d.body)}</div>
-      ${kids.length ? `<div class="inside2"><div class="px lbl2">Inside</div>${kids.map(chapRow).join("")}</div>` : ""}
-      <div class="margin"><div class="px lbl2">Your notes</div>${notes.map(slipHTML).join("")}
-        <form class="notebox tall" data-pagenote="${esc(id)}"><textarea rows="2" placeholder="Write a note on this page..." aria-label="Write a note on this page"></textarea><button type="submit">Add</button></form></div>
-      <div class="getit"><button class="${d.understood ? "on" : ""}" data-understood="${esc(id)}" aria-pressed="${!!d.understood}">${d.understood ? "✓ You get this" : "I get this"}</button>${d.understood ? `<span class="sub">since ${fmtDate(d.understood)}</span>` : ""}</div>
-      ${prev || next ? `<div class="pn">${prev ? `<button data-go="${esc(hashFor.doc(prev.id))}"><span class="sub">‹ Previous</span><span>${esc(snip(prev.title, 48))}</span></button>` : "<span></span>"}${next ? `<button class="nx" data-go="${esc(hashFor.doc(next.id))}"><span class="sub">Next ›</span><span>${esc(snip(next.title, 48))}</span></button>` : ""}</div>` : ""}
-      <div class="tinyacts"><button class="ghost" data-editdoc="${esc(id)}">Edit</button>${(d.history || []).length ? `<button class="ghost" data-dochist="${esc(id)}">Older versions</button>` : ""}<button class="ghost" data-newdoc="parent:${esc(id)}">+ Page inside</button><button class="ghost" data-edit="${esc(id)}">Move</button><span class="spacer"></span><button class="ghost ember" data-hex="items:${esc(id)}">Hex into firewood</button></div>
-    </article></div>`;
-  if (S.built !== "doc:" + id) { const rd = $("reader"); if (!wideScreen()) rd.scrollTop = 0; else window.scrollTo({ top: 0 }); }
-  S.built = "doc:" + id;
+  readerPaint("doc:" + id, `${crumbs(parts)}
+    <div class="titlerow"><h2 class="px rtitle0">${esc(shown ? shown.title : d.title)}</h2>${moreBtn("doc", id)}</div>
+    ${shown ? `<div class="banner">You're reading an older version from ${fmtDate(shown.at)}. <button class="ghost" data-docver="-1">Back to the current page</button> <button data-restorever="${v}">Bring this version back</button></div>` : ""}
+    <div class="doc">${mdDoc(shown ? shown.body : d.body)}</div>
+    ${kids.length ? `<div class="list0 kids">${kids.map(k => rowGo(hashFor.doc(k.id), k.title)).join("")}</div>` : ""}
+    ${notes.length ? `<div class="notes0">${notes.map(n => `<div class="note0" data-it="${esc(n.id)}">${md(n.title + (n.body ? "\n" + n.body : ""))}<button class="nsm" data-edit="${esc(n.id)}">${n.by === "Claude" ? "Claude" : "You"} · ${fmtDate(n.created)}</button></div>`).join("")}</div>` : ""}
+    <button class="writenote" data-quill="${esc(id)}">Write a note</button>`);
   markRead(d);
   if (isNew(d)) setTimeout(() => { const x = S.items[id]; if (x && isNew(x)) saveMark(x, { seen: true }); }, 1500);
 }
-function slipHTML(n) {
-  return `<div class="slip" data-it="${esc(n.id)}"><div class="body">${md(n.title + (n.body ? "\n" + n.body : ""))}</div><div class="sm">${n.by === "Claude" ? "Claude" : "You"} · ${fmtDate(n.created)}<button class="linkbtn" data-edit="${esc(n.id)}">edit</button></div></div>`;
+// ---- the Book of Shadows: everything you wrote that isn't sorted yet, newest first
+function rShadows() {
+  const runes = items().filter(isRune).sort(byNew);
+  readerPaint("shadows", `${crumbs([["Book of Shadows"]])}<h2 class="px rtitle0">Book of Shadows</h2>
+    <div class="list0">${runes.map(i => `<button class="row0" data-edit="${esc(i.id)}"><span class="rt">${esc(snip(i.title, 120))}<span class="rs">${fmtDate(i.created)}</span></span></button>`).join("") || `<div class="empty">Nothing waiting. Everything you write with the quill lands here until it's sorted.</div>`}</div>`);
+}
+// ---- the quill: write anything (into the Book of Shadows), or a note on the page you're reading
+function openQuill(pageId) {
+  const d = pageId ? S.items[pageId] : null;
+  openSheet("quill", `<h3>${d ? "A note on this page" : "Write anything"}</h3>
+    <textarea id="qText" rows="6" placeholder="${d ? "Your note..." : "A thought, a to-do, an idea, a worry. It goes into the Book of Shadows."}"></textarea>
+    <div class="qrow"><button class="ghost" data-closesheet>Cancel</button><button class="main" data-quillsave="${d ? esc(pageId) : ""}">${d ? "Add the note" : "Write it down"}</button></div>`);
+  setTimeout(() => $("qText") && $("qText").focus(), 60);
+}
+function saveQuill(pageId) {
+  const t = ($("qText") || {}).value || ""; if (!t.trim()) { $("qText").focus(); return; }
+  if (pageId && S.items[pageId]) { addNote(S.items[pageId], t); closeSheet(); sfx("rune"); toast("Noted on the page"); return; }
+  const ids = inscribe(t, false, "quill"); closeSheet(); pickBins(ids, false); sfx("rune");
+  toast(ids.length === 1 ? "Written in the Book of Shadows" : `${ids.length} runes written in the Book of Shadows`); render();
+}
+// ---- the "…" menu: everything else you can do to a book or page, kept out of sight
+function openMore(what, id) {
+  if (what === "doc") { const d = S.items[id]; if (!d) return;
+    openSheet("more", `<h3>${esc(snip(d.title, 60))}</h3><div class="menu0">
+      <button data-moreact data-editdoc="${esc(id)}">Edit this page</button>
+      ${(d.history || []).length ? `<button data-moreact data-dochist="${esc(id)}">Older versions</button>` : ""}
+      <button data-moreact data-newdoc="parent:${esc(id)}">New page inside this one</button>
+      <button data-moreact data-edit="${esc(id)}">Move it</button>
+      <button data-moreact class="ember" data-hex="items:${esc(id)}">Hex it into firewood</button></div>`); }
+  else { const p = projectById(id); if (!p) return;
+    openSheet("more", `<h3>${esc(p.name)}</h3><div class="menu0">
+      <button data-moreact data-newdoc="p:${esc(id)}">New page in this book</button>
+      <button data-moreact data-editproj="${esc(id)}">Edit this book</button></div>`); }
 }
 
 // ============================================================ 04 · sheets: the panels that slide in for writing, editing, finding and planning
@@ -2553,6 +2553,7 @@ function sfx(name) {
 document.addEventListener("click", e => {
   const t = e.target;
   if (t.closest("[data-stop]")) return;
+  if (t.closest("[data-moreact]")) closeSheet();   // a "…" menu choice: close the menu, then the handlers below do the choice
   const tog = t.closest("[data-toggle]");
   if (tog) { e.stopPropagation(); const it = S.items[tog.dataset.toggle]; if (it) setDone(it, !it.done); return; }
   const pk = t.closest("[data-pick]");
@@ -2594,6 +2595,10 @@ document.addEventListener("click", e => {
   const dh = t.closest("[data-dochist]"); if (dh) { openDocHistory(dh.dataset.dochist); return; }
   const dv = t.closest("[data-docver]"); if (dv) { const r = parseRoute(S.route); S.docVersion = { id: r.id, n: +dv.dataset.docver }; closeSheet(); S.built = null; render(); window.scrollTo({ top: 0 }); return; }
   const rv = t.closest("[data-restorever]"); if (rv) { const r = parseRoute(S.route), d = S.items[r.id], v = d && d.history && d.history[+rv.dataset.restorever]; if (v) { savePage(d, v.title, v.body); S.docVersion = null; toast("That version is back (the newer one is kept too)"); } return; }
+  const qf = t.closest("[data-quill]"); if (qf) { openQuill(qf.dataset.quill); return; }
+  const qs = t.closest("[data-quillsave]"); if (qs) { saveQuill(qs.dataset.quillsave); return; }
+  const mo = t.closest("[data-more]"); if (mo) { const [w, id] = mo.dataset.more.split(/:(.+)/); openMore(w, id); return; }
+  if (t.closest("[data-closesheet]")) { closeSheet(); return; }
   const und = t.closest("[data-understood]"); if (und) { const d = S.items[und.dataset.understood]; if (d) { setUnderstood(d, !d.understood); if (!d.understood) { sfx("rune"); toast("Marked as understood"); } } return; }
   const sc = t.closest("canvas.scene, canvas.roomcv"); if (sc && sc.dataset.room === "life") { const r = sc.getBoundingClientRect(), s = r.width / 71, x = (e.clientX - r.left) / s, y = (e.clientY - r.top) / s; if (x > 42 && x < 66 && y > 24) petSalem(); return; }
   const gl = t.closest("[data-go]"); if (gl) { go(gl.dataset.go); return; }
@@ -2623,6 +2628,7 @@ document.addEventListener("submit", e => {
   if (an) { e.preventDefault(); const it = S.items[an.dataset.answer], v = an.querySelector("input").value.trim(); if (it && v) { an.querySelector("input").blur(); saveItem(it, { answer: v, done: true, doneAt: Date.now() }); cheer({ ...it, kind: "question" }); } return; }
 });
 document.addEventListener("keydown", e => {
+  if (e.key === "Enter" && (e.ctrlKey || e.metaKey) && e.target.id === "qText") { e.preventDefault(); const b = document.querySelector("[data-quillsave]"); if (b) saveQuill(b.dataset.quillsave); return; }
   if (e.key === "Enter" && (e.ctrlKey || e.metaKey) && e.target.closest && e.target.closest("[data-pagenote] textarea")) { e.preventDefault(); e.target.form.requestSubmit(); return; }
   if (e.key === "Escape") { if ($("ritual").classList.contains("open") && RIT.step < 4) closeRitual(); else closeSheet(); return; }
   if (sheetMode || $("ritual").classList.contains("open") || /INPUT|TEXTAREA|SELECT/.test((document.activeElement || {}).tagName || "")) return;

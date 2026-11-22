@@ -3,6 +3,7 @@
 document.addEventListener("click", e => {
   const t = e.target;
   if (t.closest("[data-stop]")) return;
+  if (t.closest("[data-moreact]")) closeSheet();   // a "…" menu choice: close the menu, then the handlers below do the choice
   const tog = t.closest("[data-toggle]");
   if (tog) { e.stopPropagation(); const it = S.items[tog.dataset.toggle]; if (it) setDone(it, !it.done); return; }
   const pk = t.closest("[data-pick]");
@@ -44,6 +45,10 @@ document.addEventListener("click", e => {
   const dh = t.closest("[data-dochist]"); if (dh) { openDocHistory(dh.dataset.dochist); return; }
   const dv = t.closest("[data-docver]"); if (dv) { const r = parseRoute(S.route); S.docVersion = { id: r.id, n: +dv.dataset.docver }; closeSheet(); S.built = null; render(); window.scrollTo({ top: 0 }); return; }
   const rv = t.closest("[data-restorever]"); if (rv) { const r = parseRoute(S.route), d = S.items[r.id], v = d && d.history && d.history[+rv.dataset.restorever]; if (v) { savePage(d, v.title, v.body); S.docVersion = null; toast("That version is back (the newer one is kept too)"); } return; }
+  const qf = t.closest("[data-quill]"); if (qf) { openQuill(qf.dataset.quill); return; }
+  const qs = t.closest("[data-quillsave]"); if (qs) { saveQuill(qs.dataset.quillsave); return; }
+  const mo = t.closest("[data-more]"); if (mo) { const [w, id] = mo.dataset.more.split(/:(.+)/); openMore(w, id); return; }
+  if (t.closest("[data-closesheet]")) { closeSheet(); return; }
   const und = t.closest("[data-understood]"); if (und) { const d = S.items[und.dataset.understood]; if (d) { setUnderstood(d, !d.understood); if (!d.understood) { sfx("rune"); toast("Marked as understood"); } } return; }
   const sc = t.closest("canvas.scene, canvas.roomcv"); if (sc && sc.dataset.room === "life") { const r = sc.getBoundingClientRect(), s = r.width / 71, x = (e.clientX - r.left) / s, y = (e.clientY - r.top) / s; if (x > 42 && x < 66 && y > 24) petSalem(); return; }
   const gl = t.closest("[data-go]"); if (gl) { go(gl.dataset.go); return; }
@@ -73,6 +78,7 @@ document.addEventListener("submit", e => {
   if (an) { e.preventDefault(); const it = S.items[an.dataset.answer], v = an.querySelector("input").value.trim(); if (it && v) { an.querySelector("input").blur(); saveItem(it, { answer: v, done: true, doneAt: Date.now() }); cheer({ ...it, kind: "question" }); } return; }
 });
 document.addEventListener("keydown", e => {
+  if (e.key === "Enter" && (e.ctrlKey || e.metaKey) && e.target.id === "qText") { e.preventDefault(); const b = document.querySelector("[data-quillsave]"); if (b) saveQuill(b.dataset.quillsave); return; }
   if (e.key === "Enter" && (e.ctrlKey || e.metaKey) && e.target.closest && e.target.closest("[data-pagenote] textarea")) { e.preventDefault(); e.target.form.requestSubmit(); return; }
   if (e.key === "Escape") { if ($("ritual").classList.contains("open") && RIT.step < 4) closeRitual(); else closeSheet(); return; }
   if (sheetMode || $("ritual").classList.contains("open") || /INPUT|TEXTAREA|SELECT/.test((document.activeElement || {}).tagName || "")) return;

@@ -519,6 +519,32 @@ body.reading .reader { display: block; position: fixed; left: 0; right: 0; botto
   .crumbs .closer, .cont { display: none; }
   .crumbs .home-a { display: inline; }
 }
+
+/* ===== grain 0 (22 Nov 2026): read and write only. Plain lists, one quill, one "…" menu. ===== */
+.hot .bad { display: none; }
+.rtitle0 { font-size: 36px; margin: 6px 0 14px; line-height: .95; font-weight: 400; }
+.titlerow { display: flex; align-items: flex-start; gap: 10px; } .titlerow .rtitle0 { flex: 1; min-width: 0; }
+.morebtn { flex: none; width: 44px; height: 44px; border-radius: 10px; font-size: 22px; line-height: 1; color: var(--dim); background: var(--panel2); margin-top: 4px; }
+.list0 { display: flex; flex-direction: column; border-top: 1px solid var(--line); }
+.list0.kids { margin-top: 18px; }
+.row0 { display: flex; align-items: center; gap: 10px; width: 100%; text-align: left; min-height: 54px; padding: 12px 6px; background: none; border: none; border-bottom: 1px solid var(--line); border-radius: 0; font-size: 16px; color: var(--text); }
+.row0:hover { background: rgba(220,90,255,.07); }
+.row0 .rt { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+.row0 .rs { font-size: 12.5px; color: var(--dim); }
+.row0 .chev { color: var(--dim); font-size: 20px; }
+.notes0 { margin-top: 22px; display: flex; flex-direction: column; gap: 8px; }
+.note0 { background: #1d1530; border: 1.5px solid var(--line); border-radius: 12px; padding: 10px 12px 6px; font-size: 15px; }
+.note0 p { margin: 0 0 4px; }
+.nsm { background: none; border: none; padding: 4px 0; min-height: 0; font-size: 12px; color: var(--dim); }
+.writenote { margin-top: 18px; min-height: 46px; padding: 0 18px; border-radius: 12px; border: 1.5px dashed #4a3570; background: none; color: var(--pink); font-size: 15px; }
+.quillfab { position: fixed; right: 18px; bottom: calc(18px + env(safe-area-inset-bottom)); z-index: 19; display: flex; align-items: center; gap: 8px; min-height: 52px; padding: 0 18px 0 12px; border-radius: 999px; background: var(--pink); color: #1a0b24; font-weight: 600; font-size: 15px; border: none; box-shadow: 0 6px 20px rgba(0,0,0,.45); }
+.quillfab img { width: 28px; height: 28px; image-rendering: pixelated; }
+.menu0 { display: flex; flex-direction: column; gap: 8px; } .menu0 button { min-height: 48px; text-align: left; padding: 0 14px; font-size: 15px; }
+.menu0 .ember { color: var(--ember); }
+.qrow { display: flex; justify-content: flex-end; gap: 8px; margin-top: 12px; }
+#qText { font-size: 16px; }
+body.reading .reader { padding-bottom: 96px; }
+@media (min-width: 900px) { .reader, body.reading .reader { padding-bottom: 96px; } }
 </style>
 </head>
 <body>

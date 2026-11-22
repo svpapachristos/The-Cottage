@@ -8,17 +8,15 @@ It runs on my own Cloudflare Worker with a SQL database, installs as an app on m
 
 ## What it does
 
-The Cottage is a **memory first**: a home for the complete version of everything worth remembering, inside a cozy cottage you can walk through.
+The Cottage is a **long-term memory**: a home for the complete version of everything worth remembering, inside a cozy cottage. Right now it's stripped down on purpose to the foundation, **read and write**, and features come back one small grain at a time, only when they earn a place.
 
-- **The cottage is the way in.** The house is always on screen. Tap a room and its shelf opens beside the house on a PC, or slides up over it on a phone. Few words until you go deeper: the house has almost none, a room shows only its books' names, a book shows one sentence and its chapters, and a page holds the full explanation.
-- **Every project is a book.** Its cover gives one sentence and one next step, then its chapters. Pages hold pages (a book, its chapters, then a page per piece, in plain words, with lines pointing into the real code), and a trail at the top always shows the way back up. Turn to the previous or next page like a real book.
-- **Your notes in the margin.** Write a note on any page and it stays right there. Notes tucked into a book stay folded away until you want them.
-- **Studying your own work.** "I get this" marks a page as understood, and the app remembers what you've read. (Quiz me, with Munin, comes next.)
-- **The Book of Shadows by the hearth.** Write anything, from the house or the book. Each thing is a rune; Munin guesses where it belongs and one tap files it.
-- **Nothing is deleted by accident.** Hexing something turns it into a named log on the woodpile by the hearth. It's only gone when I drag the log into the fire.
-- **Shared with Claude.** Any chat can read and write the Cottage through a custom connector, and sees what I wrote and read, with times (`cottage_recent`), so a new chat starts where the last one ended.
+- **The house is the way in.** Tap a room. On a PC its books open beside the house; on a phone they slide up over it.
+- **A room is a list of books, a book is a list of pages, a page is its text.** Pages can hold pages (a book, its chapters, a page per piece, in plain words, pointing into the real code), and a trail at the top shows the way back up.
+- **Write anything with the quill** in the corner. It lands in the Book of Shadows until it's sorted. On a page, **Write a note** keeps the note right on that page.
+- **One "…" menu** holds everything else: edit, older versions, a new page inside, move, and hexing into firewood. Nothing is deleted by accident; a hexed thing waits on the woodpile until it's burned.
+- **Shared with Claude.** Any chat can read and write the Cottage through a custom connector and sees what I wrote and read, with times (`cottage_recent`), so a new chat starts where the last one ended.
 
-**Hidden for now, not deleted:** the road and its trails, threads, Today and the four bins, the rune table, the night ritual, and Munin's big menu. Their code and data are still here; the 22 Nov 2026 blueprint hid them so the app could start very simple and add pieces back only when they earn a place.
+**Hidden for now, not deleted:** Munin's speech and menu, badges, room scenes, next steps, threads, the road, Today and the bins, the rune table, the night ritual, "I get this", previous and next page. Their code and data are still here.
 
 ## Three brains, always labeled
 
@@ -106,13 +104,14 @@ npm run dev
 
 ## Where it's going
 
-The plan is the blueprint rewritten on 22 Nov 2026 (kept as a pinned page inside the Cottage): **memory first, a cozy cottage, Munin the simple helper.**
+The plan is the blueprint (a pinned page inside the Cottage): **a long-term memory, one grain at a time.** Understand before building; each grain is one small change that lives in the app for a few days before we keep it or cut it.
 
-| Step | Build | Status |
+| # | Grain | Status |
 |---|---|---|
-| 1. Memory | Notes on any page, pages marked read and understood, Claude sees both (`cottage_recent`), the manual pass filling every project's book | Built 22 Nov; manuals in progress |
-| 2. The walk | The cottage always on screen, rooms with shelves of books, a book open beside the house (PC) or sliding up over it (phone); older screens hidden | Built 22 Nov |
-| 3. Then the rest, one layer at a time | Quiz me with Munin, spare logs to toss in the fire, a simpler Book of Shadows, and whatever we find we miss | Next |
+| 0 | Read and write only: the house, plain lists of books and pages, the quill, notes on pages, one "…" menu | Built 22 Nov |
+| — | Move in every project, each with a manual written from the code or real documents | In progress |
+| 1 | Clean the shelves: audit every room, merge duplicates, flag stale pages | Next |
+| 2+ | Decided by what I reach for and can't find | |
 
 **As a data portfolio:** the event log records every capture, sort, finish and hex, so my own working habits become a real dataset for SQL, spreadsheets and Tableau. Raw personal notes never leave the Cottage; only counts and trends are published.
 
