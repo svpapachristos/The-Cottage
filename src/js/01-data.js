@@ -98,6 +98,19 @@ const pageOf = id => { const d = id && S.items[id]; return live(d) && d.kind ===
 const topPage = d => !pageOf(d.parent) || d.parent === d.id;                 // a page with no (living) page above it
 function parentsOf(d) { const out = [], seen = new Set([d.id]); let cur = d; while (cur.parent && !seen.has(cur.parent) && pageOf(cur.parent)) { cur = S.items[cur.parent]; seen.add(cur.id); out.unshift(cur); } return out; }
 const childPages = d => items().filter(i => i.kind === "doc" && i.parent === d.id && i.id !== d.id);
+// Notes written on a page: any item that isn't a page, with parent = that page. Oldest first, like margin notes.
+const notesOn = d => items().filter(i => i.kind !== "doc" && i.parent === d.id).sort((a, b) => (a.created || 0) - (b.created || 0));
+// Reading marks on a page: readAt (last time Sophia opened it), understood (when she said "I get this", or 0)
+function markRead(d) { if (!live(d) || d.kind !== "doc") return; if (Date.now() - (d.readAt || 0) > 3600e3) saveMark(d, { readAt: Date.now() }); }
+function setUnderstood(d, on) { saveMark(d, { understood: on ? Date.now() : 0 }); }
+function addNote(page, text) {
+  const t = String(text || "").trim(); if (!t) return null;
+  const nl = t.indexOf("\n"), id = newId("n");
+  EV.src = "page";
+  put("items", id, { kind: "note", title: (nl > 0 ? t.slice(0, nl) : t).slice(0, 140), body: nl > 0 ? t.slice(nl + 1).trim() : (t.length > 140 ? t : ""), area: roomOf(page), project: page.project || "", parent: page.id, done: false, pinned: false, link: "", created: Date.now(), seen: true });
+  EV.src = "";
+  return id;
+}
 
 // ---- sorting
 const byOld = (a, b) => (a.created || 0) - (b.created || 0);
@@ -114,8 +127,9 @@ const PREF = {   // per-device settings (sound), never synced
   get(k, d) { try { const v = localStorage.getItem("cottage_pref_" + k); return v === null ? d : JSON.parse(v); } catch (e) { return d; } },
   set(k, v) { try { localStorage.setItem("cottage_pref_" + k, JSON.stringify(v)); } catch (e) {} },
 };
-function put(col, id, data) {
-  const prev = S[col][id], body = { ...data, updated: Date.now() }; delete body.id;
+// keepTime: a mark (read, understood, seen) that shouldn't count as changing the thing, so "updated" stays as it was
+function put(col, id, data, keepTime) {
+  const prev = S[col][id], body = { ...data, updated: keepTime && prev ? prev.updated || prev.created || Date.now() : Date.now() }; delete body.id;
   for (const k of Object.keys(body)) if (body[k] === undefined) delete body[k];
   S[col][id] = { ...body, id }; render();
   if (col !== "meta" && !EV.quiet) changeEvents(col, prev, S[col][id]);
@@ -134,6 +148,7 @@ function putMeta(key, data) {
 }
 // Small helpers so the rest of the code reads like what it does.
 const saveItem = (it, changes) => put("items", it.id, { ...it, ...changes });
+const saveMark = (it, changes) => put("items", it.id, { ...it, ...changes }, true);
 function setDone(it, done) {
   const ch = { done, doneAt: done ? Date.now() : 0 };
   if (it.kind === "question" && done && !it.answer) ch.answer = it.answer || "";
@@ -180,6 +195,8 @@ function changeEvents(col, a, b) {
   if (col !== "items") return;
   if (!!a.done !== !!b.done && (b.kind === "todo" || b.kind === "question")) logEvent(b.done ? (b.kind === "question" ? "settle" : "finish") : "reopen", b);
   if ((a.pick || "") !== (b.pick || "")) logEvent("pick", b, { pick: b.pick || "none" });
+  if (b.kind === "doc" && (b.readAt || 0) > (a.readAt || 0)) logEvent("read", b);
+  if (b.kind === "doc" && !!a.understood !== !!b.understood) logEvent("understood", b, b.understood ? null : { undone: true });
 }
 function flushEvents() {
   if (EV.flushing) return EV.flushing;

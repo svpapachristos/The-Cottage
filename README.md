@@ -1,6 +1,6 @@
 # The Cottage
 
-A self-hosted personal knowledge base and planner, built as a pixel-art witch's cottage, with **Munin** the raven as its keeper.
+A self-hosted personal memory and knowledge base, built as a pixel-art witch's cottage, with **Munin** the raven as its keeper.
 
 Every project, plan, to-do, question, decision and stray thought across my game development, job search and school lives here, so nothing has to be planned twice. The Cottage is also the **shared memory between me and Claude**: any chat can read and write it through a custom connector, so a new conversation starts from where the last one ended.
 
@@ -8,14 +8,17 @@ It runs on my own Cloudflare Worker with a SQL database, installs as an app on m
 
 ## What it does
 
-- **Four doors, nothing more.** A bar along the bottom: **Home** (Munin's one line, today's one to three things, a box to write anything down, and the cottage), **Write** (the Book of Shadows), **Focus** (the rune table) and **Munin**. Everything else is one tap deeper.
-- **Rooms for each part of life.** The Workshop (my studio, Hedgewitch Games), the Coven Chamber and Observatory (my two big games), the Study (school), the Writing Desk (jobs and money), and the Hearth (the big picture). Projects sit on each room's shelf as little objects. Pick one up to see its one next step and the thread of steps toward a milestone.
-- **The Book of Shadows: one way in, four bins.** Write anything, from the home screen or the book. Munin pre-picks a bin for each rune (**Do**, **Keep**, **Not sure yet**, **Let go**) and a room, and one tap files it. A **Do** can go straight onto Today.
-- **Today and the road.** Today holds only to-dos: pick one to three. Each finished thing lights a lantern on the road out of the cottage, which forks into three trails (Job, Games, School) with milestones called waystones.
-- **The rune table.** Set down one project and work on just that, with a focus candle and a jot box for stray thoughts.
-- **A library of layers.** Pages can hold pages: a project is a book, with chapters, then pages explaining each piece in plain words, down to links into the real code. A trail at the top always shows where you are. The first book explains the Cottage itself.
-- **Nothing is deleted by accident.** Hexing something turns it into a named log on the woodpile. It's only gone when I drag the log into the fire, or burn the pile in the night ritual.
-- **The night ritual.** Empty your head, see what you sent out, feed the fire, pick tomorrow's first thing, lights out. Salem the cat curls up by the hearth.
+The Cottage is a **memory first**: a home for the complete version of everything worth remembering, inside a cozy cottage you can walk through.
+
+- **The cottage is the way in.** The house is always on screen. Tap a room and its shelf opens beside the house on a PC, or slides up over it on a phone. Few words until you go deeper: the house has almost none, a room shows only its books' names, a book shows one sentence and its chapters, and a page holds the full explanation.
+- **Every project is a book.** Its cover gives one sentence and one next step, then its chapters. Pages hold pages (a book, its chapters, then a page per piece, in plain words, with lines pointing into the real code), and a trail at the top always shows the way back up. Turn to the previous or next page like a real book.
+- **Your notes in the margin.** Write a note on any page and it stays right there. Notes tucked into a book stay folded away until you want them.
+- **Studying your own work.** "I get this" marks a page as understood, and the app remembers what you've read. (Quiz me, with Munin, comes next.)
+- **The Book of Shadows by the hearth.** Write anything, from the house or the book. Each thing is a rune; Munin guesses where it belongs and one tap files it.
+- **Nothing is deleted by accident.** Hexing something turns it into a named log on the woodpile by the hearth. It's only gone when I drag the log into the fire.
+- **Shared with Claude.** Any chat can read and write the Cottage through a custom connector, and sees what I wrote and read, with times (`cottage_recent`), so a new chat starts where the last one ended.
+
+**Hidden for now, not deleted:** the road and its trails, threads, Today and the four bins, the rune table, the night ritual, and Munin's big menu. Their code and data are still here; the 22 Nov 2026 blueprint hid them so the app could start very simple and add pieces back only when they earn a place.
 
 ## Three brains, always labeled
 
@@ -62,7 +65,7 @@ src/
   shell.html          markup + styles
   js/01-data.js       rooms, storage, sync with the server, threads and ties
   js/02-art.js        the cottage, rooms, objects and sprites, drawn in code
-  js/03-views.js      home, rooms, projects, pages, the Book of Shadows
+  js/03-views.js      the walk (the cottage, room shelves, books, pages), the Book of Shadows, and the parked older screens
   js/04-sheets.js     add/edit sheets, page history, settings, thread editor
   js/05-munin.js      Munin: his line, asking, sorting runes, the brain badge
   js/06-ritual.js     the night ritual
@@ -103,15 +106,13 @@ npm run dev
 
 ## Where it's going
 
-The plan is the blueprint agreed on 21 Nov 2026 (kept as a pinned page inside the Cottage):
+The plan is the blueprint rewritten on 22 Nov 2026 (kept as a pinned page inside the Cottage): **memory first, a cozy cottage, Munin the simple helper.**
 
-| Phase | Build | Status |
+| Step | Build | Status |
 |---|---|---|
-| 1. Foundation | Font restored, this README, the old claude.ai artifact mode retired, the brain badge, stale records fixed, named woodpile logs | Done |
-| 2. The belt | Simple home and four doors, one way in, four bins (Do, Keep, Not sure yet, Let go), Today from Do, the event log; then Munin splits rambles from actions, two-list rooms, room lights | In progress: the visible half and the event log are built |
-| 3. Memory | The compass (a living page about goals), a chronicle entry for every working chat, the scrying bowl for undecided things | |
-| 4. The mind | Untangling with Claude, morning brief, nudges, patterns Munin notices | |
-| 5. Showcase | Munin's Ledger (SQL), job application tracker, spreadsheet export, a public Tableau dashboard (counts and trends only) | |
+| 1. Memory | Notes on any page, pages marked read and understood, Claude sees both (`cottage_recent`), the manual pass filling every project's book | Built 22 Nov; manuals in progress |
+| 2. The walk | The cottage always on screen, rooms with shelves of books, a book open beside the house (PC) or sliding up over it (phone); older screens hidden | Built 22 Nov |
+| 3. Then the rest, one layer at a time | Quiz me with Munin, spare logs to toss in the fire, a simpler Book of Shadows, and whatever we find we miss | Next |
 
 **As a data portfolio:** the event log records every capture, sort, finish and hex, so my own working habits become a real dataset for SQL, spreadsheets and Tableau. Raw personal notes never leave the Cottage; only counts and trends are published.
 

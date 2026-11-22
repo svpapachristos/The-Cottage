@@ -447,6 +447,83 @@ footer { color: #5a4a78; font-size: 12px; text-align: center; margin-top: 34px; 
   .drawers { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .sprite.big { width: 60px; height: 60px; }
 }
+
+/* ===== the walk (22 Nov 2026): the cottage, and a book open beside it. One look for every layer. ===== */
+.doors { display: none !important; }
+#app { padding-bottom: 40px; }
+.walk { display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px; }
+.cot { display: flex; flex-direction: column; gap: 14px; align-items: stretch; min-width: 0; }
+.cot .house { margin: 0 auto; }
+.munbtn { all: unset; display: flex; gap: 12px; align-items: flex-end; cursor: pointer; }
+.munbtn:focus-visible .bubble { outline: 2px solid var(--lilac); outline-offset: 2px; }
+.hot.on .lab { background: var(--lilac); color: var(--bg); }
+.cont { align-self: center; background: #1c1132; border: 1.5px solid var(--line); border-radius: 999px; padding: 10px 16px; min-height: 44px; font-size: 14px; color: var(--dim); }
+.cont b { color: var(--text); font-weight: 500; }
+.quill { background: var(--panel); border: 1.5px solid var(--line); border-radius: 12px; padding: 12px 14px; }
+.quill label { font-size: 22px; color: var(--pink); display: block; margin-bottom: 6px; }
+.quill textarea { min-height: 56px; background: #1c1132; font-size: 16px; }
+.reader { display: none; min-width: 0; }
+body.reading .reader { display: block; position: fixed; left: 0; right: 0; bottom: 0; top: max(150px, 26vh); z-index: 12; overflow-y: auto; -webkit-overflow-scrolling: touch;
+  background: var(--panel); border-top: 2px solid var(--line); border-radius: 18px 18px 0 0; padding: 12px 16px calc(40px + env(safe-area-inset-bottom)); box-shadow: 0 -12px 34px rgba(0,0,0,.55); animation: rise .24s ease-out; }
+@keyframes rise { from { transform: translateY(40px); opacity: .4; } to { transform: none; opacity: 1; } }
+.crumbs .closer { display: inline-flex; align-items: center; min-height: 40px; padding: 0 12px; border-radius: 999px; font-size: 14px; color: var(--text); background: var(--panel2); margin-right: 4px; }
+.crumbs .home-a { display: none; }
+.rhint { padding: 60px 20px; text-align: center; color: var(--dim); }
+.rhint .px { font-size: 30px; color: var(--text); margin-bottom: 6px; }
+.roomtop { display: flex; justify-content: center; margin: 4px 0 6px; }
+.rtitle { font-size: 34px; margin: 6px 0 12px; text-align: center; }
+.shelf { display: grid; grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); gap: 10px; }
+.btile { position: relative; display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 14px 8px 12px; min-height: 112px; background: var(--panel2); border: 1.5px solid var(--line); border-radius: 12px; text-align: center; }
+.btile:hover { border-color: var(--lilac); }
+.btile:hover .sprite { animation: bob .9s ease-in-out infinite; }
+.btile .n { font-size: 14px; line-height: 1.25; color: var(--text); overflow-wrap: anywhere; }
+.btile.add { color: var(--dim); border-style: dashed; justify-content: center; }
+.btile .plus { font-size: 28px; line-height: 1; color: var(--lilac); }
+.dot { width: 8px; height: 8px; border-radius: 50%; background: var(--gold); flex: none; display: inline-block; }
+.btile .dot { position: absolute; top: 8px; right: 8px; }
+.woodlist { margin-top: 14px; background: var(--panel2); border: 1.5px solid var(--line); border-radius: 12px; padding: 4px 12px; }
+.woodlist summary { cursor: pointer; padding: 10px 0; color: var(--dim); font-size: 14px; }
+.cover { display: flex; gap: 14px; align-items: center; margin: 6px 0 12px; }
+.cover .sprite.big { padding: 6px; border-radius: 14px; background: radial-gradient(circle at 50% 60%, #2e1a50 0%, #1a0f2e 70%); }
+.cover h2 { font-size: 40px; margin: 0 0 4px; }
+.sentence { font-size: 15px; line-height: 1.45; color: #e6d4f5; }
+.nextline { display: flex; gap: 10px; align-items: baseline; background: #1c1132; border: 1.5px solid #4a3270; border-radius: 12px; padding: 10px 14px; margin: 0 0 12px; font-size: 15px; }
+.nextline .k { font-size: 11px; letter-spacing: .08em; text-transform: uppercase; font-weight: 700; color: var(--pink); flex: none; }
+.chapters, .inside2 { display: flex; flex-direction: column; gap: 8px; }
+.chap { display: flex; align-items: center; gap: 10px; width: 100%; text-align: left; min-height: 52px; padding: 10px 14px; background: var(--panel2); border: 1.5px solid var(--line); border-radius: 12px; font-size: 15px; }
+.chap:hover { border-color: var(--lilac); }
+.chap .ct { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.chap .cm { font-size: 12.5px; color: var(--dim); }
+.chap .got { color: var(--mint); font-weight: 700; }
+.chap .chev { color: var(--dim); font-size: 18px; }
+.slipsbtn { display: block; margin: 14px 0 0; background: none; border: none; color: var(--dim); padding: 8px 2px; min-height: 40px; font-size: 14px; }
+.slips { margin-top: 4px; }
+.notebox { display: flex; gap: 8px; margin-top: 12px; }
+.notebox input, .notebox textarea { flex: 1; min-width: 0; background: #1c1132; border-style: dashed; min-height: 44px; }
+.notebox.tall { flex-direction: column; } .notebox.tall button { align-self: flex-end; }
+.tinyacts { display: flex; gap: 4px; flex-wrap: wrap; margin-top: 14px; padding-top: 10px; border-top: 1px solid var(--line); }
+.tinyacts .ghost { font-size: 13px; color: var(--dim); min-height: 36px; }
+.tinyacts .ghost:hover { color: var(--lilac); }
+.tinyacts .ember { color: var(--ember); }
+.leaf-page .ptitle2 { font-size: 38px; margin: 4px 0 4px; line-height: .95; }
+.pmeta { font-size: 12.5px; color: var(--dim); margin-bottom: 10px; }
+.lbl2 { font-size: 22px; color: var(--lilac); margin: 20px 0 8px; }
+.margin .slip { background: #1d1530; border: 1.5px solid var(--line); border-left-width: 1.5px; border-radius: 12px; padding: 10px 12px; margin-bottom: 8px; font-size: 14.5px; }
+.margin .slip .body p { margin: 0 0 4px; }
+.slip .sm { font-size: 12px; color: var(--dim); display: flex; gap: 8px; align-items: center; }
+.getit { display: flex; align-items: center; gap: 10px; margin-top: 16px; }
+.getit button { min-height: 44px; padding: 0 18px; border-radius: 10px; font-weight: 600; background: #173540; border-color: #2b5560; color: #d5f5ee; }
+.getit button.on { background: var(--mint); color: #0c1d1a; border-color: var(--mint); }
+.pn { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin-top: 16px; }
+.pn button { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; text-align: left; padding: 10px 12px; min-height: 56px; border-radius: 12px; }
+.pn button.nx { align-items: flex-end; text-align: right; grid-column: 2; }
+@media (min-width: 900px) {
+  .walk { grid-template-columns: minmax(0, 46%) minmax(0, 1fr); gap: 28px; align-items: start; }
+  .cot { position: sticky; top: 10px; }
+  .reader, body.reading .reader { display: block; position: static; animation: none; background: none; border: none; box-shadow: none; padding: 4px 0 0; border-radius: 0; overflow: visible; }
+  .crumbs .closer, .cont { display: none; }
+  .crumbs .home-a { display: inline; }
+}
 </style>
 </head>
 <body>
@@ -575,6 +652,19 @@ const pageOf = id => { const d = id && S.items[id]; return live(d) && d.kind ===
 const topPage = d => !pageOf(d.parent) || d.parent === d.id;                 // a page with no (living) page above it
 function parentsOf(d) { const out = [], seen = new Set([d.id]); let cur = d; while (cur.parent && !seen.has(cur.parent) && pageOf(cur.parent)) { cur = S.items[cur.parent]; seen.add(cur.id); out.unshift(cur); } return out; }
 const childPages = d => items().filter(i => i.kind === "doc" && i.parent === d.id && i.id !== d.id);
+// Notes written on a page: any item that isn't a page, with parent = that page. Oldest first, like margin notes.
+const notesOn = d => items().filter(i => i.kind !== "doc" && i.parent === d.id).sort((a, b) => (a.created || 0) - (b.created || 0));
+// Reading marks on a page: readAt (last time Sophia opened it), understood (when she said "I get this", or 0)
+function markRead(d) { if (!live(d) || d.kind !== "doc") return; if (Date.now() - (d.readAt || 0) > 3600e3) saveMark(d, { readAt: Date.now() }); }
+function setUnderstood(d, on) { saveMark(d, { understood: on ? Date.now() : 0 }); }
+function addNote(page, text) {
+  const t = String(text || "").trim(); if (!t) return null;
+  const nl = t.indexOf("\n"), id = newId("n");
+  EV.src = "page";
+  put("items", id, { kind: "note", title: (nl > 0 ? t.slice(0, nl) : t).slice(0, 140), body: nl > 0 ? t.slice(nl + 1).trim() : (t.length > 140 ? t : ""), area: roomOf(page), project: page.project || "", parent: page.id, done: false, pinned: false, link: "", created: Date.now(), seen: true });
+  EV.src = "";
+  return id;
+}
 
 // ---- sorting
 const byOld = (a, b) => (a.created || 0) - (b.created || 0);
@@ -591,8 +681,9 @@ const PREF = {   // per-device settings (sound), never synced
   get(k, d) { try { const v = localStorage.getItem("cottage_pref_" + k); return v === null ? d : JSON.parse(v); } catch (e) { return d; } },
   set(k, v) { try { localStorage.setItem("cottage_pref_" + k, JSON.stringify(v)); } catch (e) {} },
 };
-function put(col, id, data) {
-  const prev = S[col][id], body = { ...data, updated: Date.now() }; delete body.id;
+// keepTime: a mark (read, understood, seen) that shouldn't count as changing the thing, so "updated" stays as it was
+function put(col, id, data, keepTime) {
+  const prev = S[col][id], body = { ...data, updated: keepTime && prev ? prev.updated || prev.created || Date.now() : Date.now() }; delete body.id;
   for (const k of Object.keys(body)) if (body[k] === undefined) delete body[k];
   S[col][id] = { ...body, id }; render();
   if (col !== "meta" && !EV.quiet) changeEvents(col, prev, S[col][id]);
@@ -611,6 +702,7 @@ function putMeta(key, data) {
 }
 // Small helpers so the rest of the code reads like what it does.
 const saveItem = (it, changes) => put("items", it.id, { ...it, ...changes });
+const saveMark = (it, changes) => put("items", it.id, { ...it, ...changes }, true);
 function setDone(it, done) {
   const ch = { done, doneAt: done ? Date.now() : 0 };
   if (it.kind === "question" && done && !it.answer) ch.answer = it.answer || "";
@@ -657,6 +749,8 @@ function changeEvents(col, a, b) {
   if (col !== "items") return;
   if (!!a.done !== !!b.done && (b.kind === "todo" || b.kind === "question")) logEvent(b.done ? (b.kind === "question" ? "settle" : "finish") : "reopen", b);
   if ((a.pick || "") !== (b.pick || "")) logEvent("pick", b, { pick: b.pick || "none" });
+  if (b.kind === "doc" && (b.readAt || 0) > (a.readAt || 0)) logEvent("read", b);
+  if (b.kind === "doc" && !!a.understood !== !!b.understood) logEvent("understood", b, b.understood ? null : { undone: true });
 }
 function flushEvents() {
   if (EV.flushing) return EV.flushing;
@@ -1241,7 +1335,7 @@ function parseRoute(r) {
 }
 const hashFor = { room: k => k === "book" ? "#book" : "#room-" + k, p: id => "#p-" + id, doc: id => "#doc-" + id };
 const go = h => { h = h || ""; const cur = location.hash || ""; if (cur === h || (h === "" && !cur) || (h === "#" && !cur)) route(); else location.hash = h; };
-function placeOf(it) { if (it.kind === "doc" && !isRune(it)) return hashFor.doc(it.id); const r = roomOf(it); if (r === "book") return "#book"; const p = projOf(it); return hashFor.p(p ? p.id : BASKET + r); }
+function placeOf(it) { if (it.kind === "doc" && !isRune(it)) return hashFor.doc(it.id); if (it.parent && pageOf(it.parent)) return hashFor.doc(it.parent); const r = roomOf(it); if (r === "book") return "#book"; const p = projOf(it); return hashFor.p(p ? p.id : BASKET + r); }
 
 let raf = 0;
 function render() { if (!raf) raf = requestAnimationFrame(() => { raf = 0; draw(); }); }
@@ -1255,21 +1349,24 @@ function draw() {
   $("banner").innerHTML = notes.map(n => `<div class="banner">${esc(n)}</div>`).join("");
   $("hdrSub").textContent = new Date().toLocaleDateString(undefined, { weekday: "long", month: "long", day: "numeric" });
   document.body.classList.toggle("night", isNight());
-  lightDoor();
   if (typing()) { S.pending = true; return; }
   if (!S.ready) { $("view").innerHTML = `<div class="empty" style="padding:40px;text-align:center">Lighting the lanterns...</div>`; return; }
-  const r = parseRoute(S.route);
-  if (r.v === "book") return vBook();
-  if (r.v === "library") return vLibrary();
-  if (r.v === "room" && ROOMS[r.id]) return vRoom(r.id);
-  if (r.v === "p" && projectById(r.id)) return vProject(r.id);
-  if (r.v === "table") return vTable();
-  if (r.v === "road") return vRoad();
-  if (r.v === "doc" && live(S.items[r.id])) return vDoc(r.id);
-  vHome();
+  let r = parseRoute(S.route);
+  // Parked for now (22 Nov blueprint): the road, the library page and the rune table. Their code and data stay; the
+  // screens are just not reachable, so an old link lands back at the cottage.
+  if (r.v === "road" || r.v === "library" || r.v === "table") { history.replaceState(null, "", location.pathname + location.search); S.route = ""; r = { v: "home" }; }
+  if (!placeLive(r)) r = { v: "home" };
+  if (r.v !== "home") PREF.set("lastPlace", S.route);
+  walkShell();
+  drawCottage(r);
+  // At home on a wide screen, the reader keeps the last book you had open, so you never lose your place
+  let rr = r;
+  if (r.v === "home") { const lr = parseRoute(PREF.get("lastPlace", "")); rr = wideScreen() && lr.v !== "home" && placeLive(lr) ? lr : { v: "home" }; }
+  document.body.classList.toggle("reading", r.v !== "home");
+  drawReader(rr);
 }
-function fresh(key, html) { const v = $("view"); if (S.built !== key) { v.innerHTML = html; v.firstElementChild && v.firstElementChild.classList.add("fade"); S.built = key; return true; } return false; }
-function crumbs(parts) { return `<div class="crumbs"><a data-go="">Cottage</a>${parts.map(([t, h]) => `<span class="sep">›</span>${h ? `<a data-go="${esc(h)}">${esc(t)}</a>` : `<span>${esc(t)}</span>`}`).join("")}</div>`; }
+function fresh(key, html) { const v = $("reader") || $("view"); if (S.built !== key) { v.innerHTML = html; v.firstElementChild && v.firstElementChild.classList.add("fade"); S.built = key; return true; } return false; }
+function crumbs(parts) { return `<div class="crumbs"><button class="closer" data-go="" aria-label="Back to the cottage">‹ Cottage</button><a data-go="" class="home-a">Cottage</a>${parts.map(([t, h]) => `<span class="sep">›</span>${h ? `<a data-go="${esc(h)}">${esc(t)}</a>` : `<span>${esc(t)}</span>`}`).join("")}</div>`; }
 
 // ============================================================ home: Munin's one line, today, a place to write, and the house
 // Home answers one question: what do I do next? So it holds only four things: Munin's line, Today (one to three),
@@ -1474,7 +1571,7 @@ function objTile(p) {
 }
 function fitScene() {
   const c = $("scene"); if (!c) return; const R = ROOMS[c.dataset.room], [, , w, h] = R.r;
-  const s = Math.max(2, Math.min(6, Math.floor(Math.min($("view").clientWidth, 720) / w)));
+  const s = Math.max(2, Math.min(6, Math.floor(Math.min(($("reader") || $("view")).clientWidth || 360, 720) / w)));
   c.width = w * s; c.height = h * s; c.style.width = w * s + "px"; c.style.height = h * s + "px"; c.dataset.s = s;
   const f = c.parentElement; if (f.classList.contains("fireplace")) { f.style.width = c.style.width; f.style.height = c.style.height; }
 }
@@ -1662,6 +1759,144 @@ function mdDoc(src) {   // full pages: headings, lists, tables, quotes, code, ch
     out.push("<p>" + buf.map(inline).join("<br>") + "</p>");
   }
   return out.join("");
+}
+
+// ============================================================ the walk (22 Nov 2026 blueprint): the cottage, and a book open beside it
+// Three places only: the cottage (always there), a room's shelf of books, and a book or page open in the reader.
+// On a wide screen the reader sits beside the cottage like a book open at the hearth; on a phone it slides up over it.
+// Few words until the cogs: the cottage has almost none, a room only its books' names, a book its sentence and
+// chapters, and a page the full explanation.
+// (The older screens below — vHome, vRoom, vProject, vDoc, vLibrary, vRoad — are parked, not deleted.)
+const wideScreen = () => innerWidth >= 900;
+function placeLive(r) {
+  if (r.v === "room") return !!ROOMS[r.id];
+  if (r.v === "p") return !!projectById(r.id);
+  if (r.v === "doc") return live(S.items[r.id]) && S.items[r.id].kind === "doc";
+  return r.v === "home" || r.v === "book";
+}
+function walkShell() {
+  if ($("walk")) return;
+  $("view").innerHTML = `<div class="walk" id="walk">
+    <section class="cot" id="cot" aria-label="The cottage">
+      <div id="cotMunin"></div>
+      <div class="house" id="house"><canvas id="hcv" width="${HW}" height="${HH}"></canvas><div id="hots"></div></div>
+      <div id="cotCont"></div>
+      <div class="quill"><label class="px" for="homeIn">Write anything</label>
+        <textarea id="homeIn" rows="2" placeholder="A thought, a to-do, an idea. Munin will sort it."></textarea>
+        <div class="caprow"><span id="homeRunes" class="sub"></span><button class="main" id="homeSave">Write it down</button></div></div>
+    </section>
+    <section class="reader" id="reader" aria-label="The open book"></section></div>`;
+  S.built = null; fitHouse();
+  $("homeSave").onclick = homeInscribe;
+  $("homeIn").onkeydown = e => { if (e.key === "Enter" && (e.ctrlKey || e.metaKey || !e.shiftKey && !/\n/.test($("homeIn").value) && $("homeIn").value.length < 140)) { e.preventDefault(); homeInscribe(); } };
+}
+function areaOfRoute(r) { return r.v === "room" ? r.id : r.v === "book" ? "book" : r.v === "p" ? (projectById(r.id) || {}).area : r.v === "doc" ? roomOf(S.items[r.id]) : ""; }
+function drawCottage(r) {
+  const s = S.scale || 2, here = areaOfRoute(r), newOnes = items().filter(i => isNew(i) && !isRune(i)), runes = items().filter(isRune);
+  const newBy = {}; for (const i of newOnes) { const k = roomOf(i); newBy[k] = (newBy[k] || 0) + 1; }
+  $("hots").innerHTML = Object.entries(ROOMS).map(([k, R]) => {
+    const [x, y, w, h] = R.r, n = k === "book" ? runes.length : newBy[k] || 0;
+    // one small marker at most: runes waiting in the book, or how many new things Claude left in that room
+    const bad = n ? `<span class="chipn ${k === "book" ? "rune" : "new"}">${n}</span>` : "";
+    return `<button class="hot${k === here ? " on" : ""}" data-room="${k}" style="left:${x * s}px;top:${y * s}px;width:${w * s}px;height:${h * s}px" aria-label="${esc(R.name)}${n ? ", " + n + (k === "book" ? " runes waiting" : " new") : ""}"><span class="bad">${bad}</span><span class="lab">${esc(R.name)}</span></button>`;
+  }).join("");
+  const hr = new Date().getHours(), hello = hr < 5 ? "Still up" : hr < 12 ? "Good morning" : hr < 18 ? "Good afternoon" : "Good evening";
+  const newest = newOnes.sort(byNew)[0];
+  const say = newest ? { t: `Claude left ${newOnes.length} new ${newOnes.length === 1 ? "thing" : "things"} for you.`, go: placeOf(newest) }
+    : runes.length ? { t: `${runes.length} ${runes.length === 1 ? "rune waits" : "runes wait"} in the Book of Shadows.`, go: "#book" } : { t: "The fire's going.", go: "" };
+  $("cotMunin").innerHTML = `<button class="munin munbtn" data-go="${esc(say.go)}"><canvas id="muninHome" width="16" height="16" aria-hidden="true"></canvas><span class="bubble"><span class="hi">${hello}, Sophia</span>${esc(say.t)}</span></button>`;
+  const last = parseRoute(PREF.get("lastPlace", "")), lastT = last.v === "doc" && placeLive(last) ? S.items[last.id].title : last.v === "p" && placeLive(last) ? projectById(last.id).name : "";
+  $("cotCont").innerHTML = r.v === "home" && lastT ? `<button class="cont" data-go="#${esc(PREF.get("lastPlace", ""))}">Keep reading: <b>${esc(snip(lastT, 46))}</b> ›</button>` : "";
+  $("homeRunes").innerHTML = runesLine();
+}
+function drawReader(rr) {
+  const el = $("reader");
+  if (rr.v === "home") { if (S.built !== "rhome") { el.innerHTML = `<div class="rhint fade"><div class="px">Pick a room</div><div class="sub">Each room holds its books. Tap one in the cottage.</div></div>`; S.built = "rhome"; } return; }
+  if (rr.v === "room") return rRoom(rr.id);
+  if (rr.v === "book") return vBook();
+  if (rr.v === "p") return rBook(rr.id);
+  if (rr.v === "doc") return rPage(rr.id);
+}
+
+// ---- a room: its scene, and its shelf of books (just their names)
+function rRoom(area) {
+  if (area === "book") return vBook();
+  const R = ROOMS[area];
+  const scene = area === "life" ? `<div class="fireplace big" id="hearthFire"><canvas id="scene" class="scene" data-room="life"></canvas><div class="logs" id="hearthLogs"></div></div>` : `<canvas id="scene" class="scene" data-room="${area}"></canvas>`;
+  if (fresh("room:" + area, `<div>${crumbs([[R.name]])}<div class="roomtop">${scene}</div><h2 class="px rtitle">${esc(R.name)}</h2><div id="shelf"></div><div id="roomExtra"></div></div>`)) fitScene();
+  const ps = projects().filter(p => (p.area || "games") === area).sort((a, b) => (a.order ?? 99) - (b.order ?? 99));
+  const loose = items().filter(i => i.kind === "doc" && roomOf(i) === area && !projOf(i) && topPage(i)).sort(byPage);
+  const basket = basketOf(area), inBasket = itemsOf(basket).filter(i => i.kind !== "doc").length;
+  $("shelf").innerHTML = `<div class="shelf">${ps.map(bookTile).join("")}${loose.map(pageTile).join("")}${inBasket ? bookTile(basket) : ""}
+    <button class="btile add" data-newproj="${area}"><span class="plus" aria-hidden="true">+</span><span class="n">New book</span></button></div>`;
+  if (area === "life") {
+    const wood = woodpile();
+    $("hearthLogs").innerHTML = logsHTML(wood); wireFireplace("hearthFire");
+    $("roomExtra").innerHTML = wood.length ? `<details class="woodlist"${S.open.has("woodlist") ? " open" : ""}><summary data-toggleopen="woodlist">The woodpile (${wood.length})</summary>
+      <div class="sub" style="margin:6px 0">Drag a log into the fire to burn it for good, or pull it back off the pile.</div>
+      ${wood.map(({ col, o }) => `<div class="res" style="cursor:default"><img src="${col === "projects" ? objURL(o) : icon(o.kind || "note")}" alt=""><div style="flex:1;min-width:0"><div class="t">${esc(o.title || o.name)}</div><div class="w">hexed ${fmtDate(o.wood)}</div></div><button data-unhex="${col}:${esc(o.id)}">Pull it off</button><button class="ember" data-burnone="${col}:${esc(o.id)}" aria-label="Burn ${esc(o.title || o.name)}">Burn</button></div>`).join("")}</details>` : "";
+  } else $("roomExtra").innerHTML = "";
+}
+const newDot = o => isNew(o) ? `<span class="dot" title="New from Claude" aria-label="new"></span>` : "";
+function bookTile(p) {
+  const anyNew = itemsOf(p).some(isNew);
+  return `<button class="btile" data-proj="${esc(p.id)}"><img class="sprite" src="${objURL(p)}" alt=""><span class="n">${esc(p.name)}</span>${anyNew ? `<span class="dot" aria-label="new"></span>` : ""}</button>`;
+}
+function pageTile(d) { return `<button class="btile" data-go="${esc(hashFor.doc(d.id))}"><img class="sprite" src="${icon("doc")}" alt=""><span class="n">${esc(snip(d.title, 40))}</span>${newDot(d)}</button>`; }
+function chapRow(d) {
+  const kids = childPages(d).length, notes = notesOn(d).length;
+  const meta = [kids ? `${kids} inside` : "", notes ? `${notes} ${notes === 1 ? "note" : "notes"}` : ""].filter(Boolean).join(" · ");
+  return `<button class="chap" data-go="${esc(hashFor.doc(d.id))}"><span class="ct">${esc(d.title)}${meta ? `<span class="cm">${meta}</span>` : ""}</span>${d.understood ? `<span class="got" title="You get this" aria-label="understood">✓</span>` : ""}${newDot(d)}<span class="chev" aria-hidden="true">›</span></button>`;
+}
+
+// ---- a book: its cover (one sentence), one next step, and its chapters. Notes tucked inside stay folded away.
+function rBook(id) {
+  const p = projectById(id), area = p.area || "games", R = ROOMS[area] || ROOMS.games, ctx = p.virtual ? "room:" + area : "p:" + id;
+  const its = itemsOf(p);
+  const chapters = its.filter(i => i.kind === "doc" && topPage(i)).sort((a, b) => (b.pinned ? 1 : 0) - (a.pinned ? 1 : 0) || byChapter(a, b));
+  const slips = its.filter(i => i.kind !== "doc" && !pageOf(i.parent)).sort(byNew);
+  const ns = p.virtual ? null : nextStep(p), nextTxt = ns && ns.kind !== "stone" ? ns.label : (p.next || "");
+  const open = S.open.has("slips:" + id) || slips.some(i => S.open.has(i.id));
+  $("reader").innerHTML = `<div class="${S.built === "p:" + id ? "" : "fade"}">${crumbs([[R.name, hashFor.room(area)], [p.name]])}
+    <div class="cover"><img class="sprite big" src="${objURL(p)}" alt=""><div style="min-width:0"><h2 class="px">${esc(p.name)}</h2>${p.status ? `<div class="sentence">${esc(snip(p.status, 170))}</div>` : ""}</div></div>
+    ${nextTxt ? `<div class="nextline"><span class="k">Next</span><span>${esc(nextTxt)}</span></div>` : ""}
+    ${p.link ? `<div style="margin:2px 0 10px"><a class="play" href="${esc(safeUrl(p.link))}" target="_blank" rel="noopener">${esc(p.linkLabel || "Open")}</a></div>` : ""}
+    <div class="chapters">${chapters.length ? chapters.map(chapRow).join("") : `<div class="empty">No pages in this book yet. Claude writes them as you build.</div>`}</div>
+    ${slips.length ? `<button class="slipsbtn" data-toggleopen="slips:${esc(id)}" aria-expanded="${open}">${slips.length} ${slips.length === 1 ? "note" : "notes"} tucked in this book <span aria-hidden="true">${open ? "▴" : "▾"}</span></button>${open ? `<div class="slips">${list(slips, "")}</div>` : ""}` : ""}
+    <form class="notebox" data-booknote="${esc(id)}"><input type="text" placeholder="Write a note in this book..." aria-label="Write a note in this book"><button type="submit">Add</button></form>
+    <div class="tinyacts"><button class="ghost" data-newdoc="${esc(ctx)}">+ New page</button>${p.virtual ? "" : `<button class="ghost" data-editproj="${esc(id)}">Edit book</button>`}</div></div>`;
+  S.built = "p:" + id;
+}
+
+// ---- a page: read it, write in its margin, mark it understood, turn to the next one
+function rPage(id) {
+  const d = S.items[id], p = projOf(d), area = roomOf(d), R = ROOMS[area];
+  const parts = [[R.name, hashFor.room(area)]]; if (p) parts.push([p.name, hashFor.p(p.id)]); for (const up of parentsOf(d)) parts.push([up.title, hashFor.doc(up.id)]); parts.push([d.title]);
+  const kids = childPages(d).sort(byChapter), notes = notesOn(d);
+  const par = d.parent && d.parent !== d.id && pageOf(d.parent) ? S.items[d.parent] : null;
+  const sibs = par ? childPages(par).sort(byChapter) : items().filter(i => i.kind === "doc" && topPage(i) && (i.project || "") === (d.project || "") && roomOf(i) === area).sort((a, b) => (b.pinned ? 1 : 0) - (a.pinned ? 1 : 0) || byChapter(a, b));
+  const k = sibs.findIndex(x => x.id === id), prev = k > 0 ? sibs[k - 1] : null, next = k >= 0 ? sibs[k + 1] : null;
+  const v = S.docVersion && S.docVersion.id === id ? S.docVersion.n : -1, shown = v >= 0 && d.history && d.history[v] ? d.history[v] : null;
+  $("reader").innerHTML = `<div class="${S.built === "doc:" + id ? "" : "fade"}">${crumbs(parts)}
+    <article class="leaf-page">
+      <h2 class="px ptitle2">${esc(shown ? shown.title : d.title)}</h2>
+      <div class="pmeta">${d.by === "Claude" ? "Written by Claude" : "Written by you"}${d.updated ? " · updated " + fmtDate(d.updated) : ""}${isNew(d) ? ` <span class="tag new">new</span>` : ""}</div>
+      ${shown ? `<div class="banner">You're reading an older version from ${fmtDate(shown.at)}. <button class="ghost" data-docver="-1">Back to the current page</button> <button data-restorever="${v}">Bring this version back</button></div>` : ""}
+      <div class="doc">${mdDoc(shown ? shown.body : d.body)}</div>
+      ${kids.length ? `<div class="inside2"><div class="px lbl2">Inside</div>${kids.map(chapRow).join("")}</div>` : ""}
+      <div class="margin"><div class="px lbl2">Your notes</div>${notes.map(slipHTML).join("")}
+        <form class="notebox tall" data-pagenote="${esc(id)}"><textarea rows="2" placeholder="Write a note on this page..." aria-label="Write a note on this page"></textarea><button type="submit">Add</button></form></div>
+      <div class="getit"><button class="${d.understood ? "on" : ""}" data-understood="${esc(id)}" aria-pressed="${!!d.understood}">${d.understood ? "✓ You get this" : "I get this"}</button>${d.understood ? `<span class="sub">since ${fmtDate(d.understood)}</span>` : ""}</div>
+      ${prev || next ? `<div class="pn">${prev ? `<button data-go="${esc(hashFor.doc(prev.id))}"><span class="sub">‹ Previous</span><span>${esc(snip(prev.title, 48))}</span></button>` : "<span></span>"}${next ? `<button class="nx" data-go="${esc(hashFor.doc(next.id))}"><span class="sub">Next ›</span><span>${esc(snip(next.title, 48))}</span></button>` : ""}</div>` : ""}
+      <div class="tinyacts"><button class="ghost" data-editdoc="${esc(id)}">Edit</button>${(d.history || []).length ? `<button class="ghost" data-dochist="${esc(id)}">Older versions</button>` : ""}<button class="ghost" data-newdoc="parent:${esc(id)}">+ Page inside</button><button class="ghost" data-edit="${esc(id)}">Move</button><span class="spacer"></span><button class="ghost ember" data-hex="items:${esc(id)}">Hex into firewood</button></div>
+    </article></div>`;
+  if (S.built !== "doc:" + id) { const rd = $("reader"); if (!wideScreen()) rd.scrollTop = 0; else window.scrollTo({ top: 0 }); }
+  S.built = "doc:" + id;
+  markRead(d);
+  if (isNew(d)) setTimeout(() => { const x = S.items[id]; if (x && isNew(x)) saveMark(x, { seen: true }); }, 1500);
+}
+function slipHTML(n) {
+  return `<div class="slip" data-it="${esc(n.id)}"><div class="body">${md(n.title + (n.body ? "\n" + n.body : ""))}</div><div class="sm">${n.by === "Claude" ? "Claude" : "You"} · ${fmtDate(n.created)}<button class="linkbtn" data-edit="${esc(n.id)}">edit</button></div></div>`;
 }
 
 // ============================================================ 04 · sheets: the panels that slide in for writing, editing, finding and planning
@@ -2359,6 +2594,7 @@ document.addEventListener("click", e => {
   const dh = t.closest("[data-dochist]"); if (dh) { openDocHistory(dh.dataset.dochist); return; }
   const dv = t.closest("[data-docver]"); if (dv) { const r = parseRoute(S.route); S.docVersion = { id: r.id, n: +dv.dataset.docver }; closeSheet(); S.built = null; render(); window.scrollTo({ top: 0 }); return; }
   const rv = t.closest("[data-restorever]"); if (rv) { const r = parseRoute(S.route), d = S.items[r.id], v = d && d.history && d.history[+rv.dataset.restorever]; if (v) { savePage(d, v.title, v.body); S.docVersion = null; toast("That version is back (the newer one is kept too)"); } return; }
+  const und = t.closest("[data-understood]"); if (und) { const d = S.items[und.dataset.understood]; if (d) { setUnderstood(d, !d.understood); if (!d.understood) { sfx("rune"); toast("Marked as understood"); } } return; }
   const sc = t.closest("canvas.scene, canvas.roomcv"); if (sc && sc.dataset.room === "life") { const r = sc.getBoundingClientRect(), s = r.width / 71, x = (e.clientX - r.left) / s, y = (e.clientY - r.top) / s; if (x > 42 && x < 66 && y > 24) petSalem(); return; }
   const gl = t.closest("[data-go]"); if (gl) { go(gl.dataset.go); return; }
   const pr = t.closest("[data-proj]"); if (pr) { go(hashFor.p(pr.dataset.proj)); return; }
@@ -2376,10 +2612,18 @@ document.addEventListener("submit", e => {
   if (add) { e.preventDefault(); const inp = add.querySelector("input"), t = inp.value.trim(); if (!t) return; const ctx = add.dataset.add, [kind, key] = ctx.split(":");
     const area = kind === "p" ? (S.projects[key].area || "games") : key, project = kind === "p" ? key : "";
     inp.value = ""; inp.blur(); put("items", newId("t"), { kind: "todo", title: t, body: "", area, project, link: "", done: false, pinned: false, created: Date.now(), by: "Sophia" }); sfx("rune"); toast("Added"); return; }
+  const bn2 = e.target.closest("[data-booknote]");
+  if (bn2) { e.preventDefault(); const inp = bn2.querySelector("input"), t = inp.value.trim(), p = projectById(bn2.dataset.booknote); if (!t || !p) return;
+    inp.value = ""; inp.blur(); EV.src = "book-note"; put("items", newId("n"), { kind: "note", title: t.slice(0, 200), body: t.length > 200 ? t : "", area: p.area || "games", project: p.virtual ? "" : p.id, link: "", done: false, pinned: false, created: Date.now(), seen: true }); EV.src = "";
+    S.open.add("slips:" + p.id); sfx("rune"); toast("Tucked into the book"); return; }
+  const pn = e.target.closest("[data-pagenote]");
+  if (pn) { e.preventDefault(); const ta = pn.querySelector("textarea"), d = S.items[pn.dataset.pagenote]; if (!d || !ta.value.trim()) return;
+    addNote(d, ta.value); ta.value = ""; ta.blur(); sfx("rune"); toast("Written in the margin"); return; }
   const an = e.target.closest("[data-answer]");
   if (an) { e.preventDefault(); const it = S.items[an.dataset.answer], v = an.querySelector("input").value.trim(); if (it && v) { an.querySelector("input").blur(); saveItem(it, { answer: v, done: true, doneAt: Date.now() }); cheer({ ...it, kind: "question" }); } return; }
 });
 document.addEventListener("keydown", e => {
+  if (e.key === "Enter" && (e.ctrlKey || e.metaKey) && e.target.closest && e.target.closest("[data-pagenote] textarea")) { e.preventDefault(); e.target.form.requestSubmit(); return; }
   if (e.key === "Escape") { if ($("ritual").classList.contains("open") && RIT.step < 4) closeRitual(); else closeSheet(); return; }
   if (sheetMode || $("ritual").classList.contains("open") || /INPUT|TEXTAREA|SELECT/.test((document.activeElement || {}).tagName || "")) return;
   if (e.key === "/" || (e.key.toLowerCase() === "k" && (e.ctrlKey || e.metaKey))) { e.preventDefault(); openSearch(); }
@@ -2394,12 +2638,8 @@ document.querySelector(".doors").onclick = e => { const b = e.target.closest("[d
   if (d === "home") go(""); else if (d === "write") go("#book"); else if (d === "focus") go("#table"); else openMunin(); };
 function doorOf(r) { return r.v === "book" ? "write" : r.v === "table" ? "focus" : "home"; }
 function lightDoor() { const d = sheetMode === "munin" ? "munin" : doorOf(parseRoute(S.route)); document.querySelectorAll(".doors [data-door]").forEach(b => { b.classList.toggle("on", b.dataset.door === d); b.toggleAttribute("aria-current", b.dataset.door === d); }); }
-function enterRoom(k) {
-  const h = $("house"), [x, y, w, hh] = ROOMS[k].r, s = S.scale;
-  if (k === "life" && isNight()) { petSalem(); return; }
-  h.style.transformOrigin = `${(x + w / 2) * s}px ${(y + hh / 2) * s}px`; h.style.transform = "scale(1.8)"; h.classList.add("zoom");
-  setTimeout(() => go(hashFor.room(k)), 240);
-}
+// Tapping a room opens its shelf in the reader; the cottage stays where it is (no zoom: the house never leaves the screen)
+function enterRoom(k) { sfx("rune"); go(hashFor.room(k)); }
 
 // ---- the animation loop: about nine frames a second is plenty for pixel art, and kind to batteries
 let lastFrame = 0;

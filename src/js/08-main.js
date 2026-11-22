@@ -44,6 +44,7 @@ document.addEventListener("click", e => {
   const dh = t.closest("[data-dochist]"); if (dh) { openDocHistory(dh.dataset.dochist); return; }
   const dv = t.closest("[data-docver]"); if (dv) { const r = parseRoute(S.route); S.docVersion = { id: r.id, n: +dv.dataset.docver }; closeSheet(); S.built = null; render(); window.scrollTo({ top: 0 }); return; }
   const rv = t.closest("[data-restorever]"); if (rv) { const r = parseRoute(S.route), d = S.items[r.id], v = d && d.history && d.history[+rv.dataset.restorever]; if (v) { savePage(d, v.title, v.body); S.docVersion = null; toast("That version is back (the newer one is kept too)"); } return; }
+  const und = t.closest("[data-understood]"); if (und) { const d = S.items[und.dataset.understood]; if (d) { setUnderstood(d, !d.understood); if (!d.understood) { sfx("rune"); toast("Marked as understood"); } } return; }
   const sc = t.closest("canvas.scene, canvas.roomcv"); if (sc && sc.dataset.room === "life") { const r = sc.getBoundingClientRect(), s = r.width / 71, x = (e.clientX - r.left) / s, y = (e.clientY - r.top) / s; if (x > 42 && x < 66 && y > 24) petSalem(); return; }
   const gl = t.closest("[data-go]"); if (gl) { go(gl.dataset.go); return; }
   const pr = t.closest("[data-proj]"); if (pr) { go(hashFor.p(pr.dataset.proj)); return; }
@@ -61,10 +62,18 @@ document.addEventListener("submit", e => {
   if (add) { e.preventDefault(); const inp = add.querySelector("input"), t = inp.value.trim(); if (!t) return; const ctx = add.dataset.add, [kind, key] = ctx.split(":");
     const area = kind === "p" ? (S.projects[key].area || "games") : key, project = kind === "p" ? key : "";
     inp.value = ""; inp.blur(); put("items", newId("t"), { kind: "todo", title: t, body: "", area, project, link: "", done: false, pinned: false, created: Date.now(), by: "Sophia" }); sfx("rune"); toast("Added"); return; }
+  const bn2 = e.target.closest("[data-booknote]");
+  if (bn2) { e.preventDefault(); const inp = bn2.querySelector("input"), t = inp.value.trim(), p = projectById(bn2.dataset.booknote); if (!t || !p) return;
+    inp.value = ""; inp.blur(); EV.src = "book-note"; put("items", newId("n"), { kind: "note", title: t.slice(0, 200), body: t.length > 200 ? t : "", area: p.area || "games", project: p.virtual ? "" : p.id, link: "", done: false, pinned: false, created: Date.now(), seen: true }); EV.src = "";
+    S.open.add("slips:" + p.id); sfx("rune"); toast("Tucked into the book"); return; }
+  const pn = e.target.closest("[data-pagenote]");
+  if (pn) { e.preventDefault(); const ta = pn.querySelector("textarea"), d = S.items[pn.dataset.pagenote]; if (!d || !ta.value.trim()) return;
+    addNote(d, ta.value); ta.value = ""; ta.blur(); sfx("rune"); toast("Written in the margin"); return; }
   const an = e.target.closest("[data-answer]");
   if (an) { e.preventDefault(); const it = S.items[an.dataset.answer], v = an.querySelector("input").value.trim(); if (it && v) { an.querySelector("input").blur(); saveItem(it, { answer: v, done: true, doneAt: Date.now() }); cheer({ ...it, kind: "question" }); } return; }
 });
 document.addEventListener("keydown", e => {
+  if (e.key === "Enter" && (e.ctrlKey || e.metaKey) && e.target.closest && e.target.closest("[data-pagenote] textarea")) { e.preventDefault(); e.target.form.requestSubmit(); return; }
   if (e.key === "Escape") { if ($("ritual").classList.contains("open") && RIT.step < 4) closeRitual(); else closeSheet(); return; }
   if (sheetMode || $("ritual").classList.contains("open") || /INPUT|TEXTAREA|SELECT/.test((document.activeElement || {}).tagName || "")) return;
   if (e.key === "/" || (e.key.toLowerCase() === "k" && (e.ctrlKey || e.metaKey))) { e.preventDefault(); openSearch(); }
@@ -79,12 +88,8 @@ document.querySelector(".doors").onclick = e => { const b = e.target.closest("[d
   if (d === "home") go(""); else if (d === "write") go("#book"); else if (d === "focus") go("#table"); else openMunin(); };
 function doorOf(r) { return r.v === "book" ? "write" : r.v === "table" ? "focus" : "home"; }
 function lightDoor() { const d = sheetMode === "munin" ? "munin" : doorOf(parseRoute(S.route)); document.querySelectorAll(".doors [data-door]").forEach(b => { b.classList.toggle("on", b.dataset.door === d); b.toggleAttribute("aria-current", b.dataset.door === d); }); }
-function enterRoom(k) {
-  const h = $("house"), [x, y, w, hh] = ROOMS[k].r, s = S.scale;
-  if (k === "life" && isNight()) { petSalem(); return; }
-  h.style.transformOrigin = `${(x + w / 2) * s}px ${(y + hh / 2) * s}px`; h.style.transform = "scale(1.8)"; h.classList.add("zoom");
-  setTimeout(() => go(hashFor.room(k)), 240);
-}
+// Tapping a room opens its shelf in the reader; the cottage stays where it is (no zoom: the house never leaves the screen)
+function enterRoom(k) { sfx("rune"); go(hashFor.room(k)); }
 
 // ---- the animation loop: about nine frames a second is plenty for pixel art, and kind to batteries
 let lastFrame = 0;

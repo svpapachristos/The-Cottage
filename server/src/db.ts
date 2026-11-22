@@ -60,7 +60,7 @@ export async function loadAll(db: D1Database) {
 }
 
 // ---- the event log (see schema.sql): append-only, no note text
-export const EVENT_TYPES = ["capture", "sort", "pick", "finish", "reopen", "settle", "hex", "unhex", "burn", "focus", "close", "create", "edit", "waystone"];
+export const EVENT_TYPES = ["capture", "sort", "pick", "finish", "reopen", "settle", "hex", "unhex", "burn", "focus", "close", "create", "edit", "waystone", "read", "understood"];
 export type CottageEvent = { cid?: string; at?: number; type: string; who?: string; ref?: string; kind?: string; area?: string; project?: string; bin?: string; extra?: Record<string, unknown> };
 const short = (v: unknown, n = 80) => (typeof v === "string" && v ? v.slice(0, n) : null);
 export async function logEvents(db: D1Database, evs: CottageEvent[]): Promise<number> {
