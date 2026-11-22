@@ -1,0 +1,15 @@
+# Backups hold every personal note: never commit them
+backups/
+the-cottage-backup-*.json
+my-brain-backup-*.json
+
+# Server tooling and local secrets (also covered in server/.gitignore)
+node_modules/
+.wrangler/
+.dev.vars
+wrangler.local.jsonc
+
+# OS clutter
+.DS_Store
+Thumbs.db
+desktop.ini

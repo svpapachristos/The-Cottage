@@ -13,7 +13,7 @@ function openAdd(preset) {
   const hereName = here ? (ctx.project && S.projects[ctx.project] ? S.projects[ctx.project].name : "the " + ROOMS[ctx.area].name) : "";
   openSheet("add", `<h3>${img("quill")} Write a rune</h3>
     <textarea id="aText" rows="5" placeholder="Anything: a to-do, an idea, a question, a link, a whole plan..."></textarea>
-    <div class="chips" id="aDest">${here ? `<button class="chip on" data-dest="here">Put it in ${esc(hereName)}</button>` : ""}<button class="chip ${here ? "" : "on"}" data-dest="book">${SAMPLE && PREF.get("autofile", true) ? "Give it to Munin" : "Into the Book of Shadows"}</button></div>
+    <div class="chips" id="aDest">${here ? `<button class="chip on" data-dest="here">Put it in ${esc(hereName)}</button>` : ""}<button class="chip ${here ? "" : "on"}" data-dest="book">${MUNIN_AI && PREF.get("autofile", true) ? "Give it to Munin" : "Into the Book of Shadows"}</button></div>
     <div id="aHere" ${here ? "" : "hidden"}><div class="chips" id="aKinds">${["auto", "todo", "note", "idea", "question", "decision", "link", "doc"].map(k => `<button class="chip ${k === "auto" ? "on" : ""}" data-ak="${k}">${k === "auto" ? "Figure it out" : KINDS[k]}</button>`).join("")}</div></div>
     <div class="sub" id="aHint">${here ? "" : bookHint()}</div>
     <div class="btns"><span class="spacer"></span><span class="sub" id="aStatus"></span><button class="main" id="aSave">${here ? "Write it down" : "Inscribe"}</button></div>`);
@@ -29,7 +29,7 @@ function openAdd(preset) {
   $("aText").onkeydown = e => { if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) $("aSave").click(); };
   setTimeout(() => $("aText").focus(), 50);
 }
-const bookHint = () => SAMPLE && PREF.get("autofile", true) ? "Munin reads it right away and carries it to the right room. If he isn't sure, it waits in the Book of Shadows." : "It waits in the Book of Shadows until you, or Munin, send it to a room.";
+const bookHint = () => MUNIN_AI && PREF.get("autofile", true) ? "Munin reads it right away and carries it to the right room. If he isn't sure, it waits in the Book of Shadows." : "It waits in the Book of Shadows until you, or Munin, send it to a room.";
 function splitTitle(text) { const lines = text.split("\n"); let title = lines[0].replace(/^#+\s*/, "").trim(), body = lines.slice(1).join("\n").trim(); if (title.length > 140) { body = text; title = title.slice(0, 80).replace(/\s+\S*$/, "") + "..."; } return { title, body }; }
 function guessKind(text) {
   const { title } = splitTitle(text), link = (text.match(/https?:\/\/\S+/) || [""])[0];
@@ -37,8 +37,7 @@ function guessKind(text) {
   return /^(todo|to do|to-do|remember to|need to|i need to|i should)\b/i.test(text) ? "todo" : /\?\s*$/.test(title) ? "question" : link && text.replace(link, "").trim().length < 20 ? "link" : "note";
 }
 function addHere(text, kind, area, project) {
-  if (S.readOnly) { toast("Read-only here"); return; }
-  if (kind === "auto") kind = guessKind(text);
+    if (kind === "auto") kind = guessKind(text);
   const { title, body } = splitTitle(text), link = (text.match(/https?:\/\/\S+/) || [""])[0];
   const id = newId(kind.slice(0, 1));
   put("items", id, { kind, title: title.slice(0, 200), body, area, project: project || "", link, done: false, pinned: false, created: Date.now(), by: "Sophia" });
@@ -68,7 +67,7 @@ function openEdit(id) {
     <label>Link<input type="url" id="eLink" value="${esc(it.link || "")}" placeholder="https://..."></label>
     ${it.kind === "log" ? `<label>Date<input type="text" id="eDate" value="${esc(it.date || "")}" placeholder="${dayKey()}"></label>` : ""}
     <div class="checks">${it.kind === "todo" || it.kind === "question" ? `<label><input type="checkbox" id="eDone" ${it.done ? "checked" : ""}> Done</label>` : ""}<label><input type="checkbox" id="ePin" ${it.pinned ? "checked" : ""}> Pinned</label></div>
-    <div class="sub">${it.created ? "Added " + fmtDate(it.created) + (it.by === "Claude" ? ", brought by Munin from a chat" : it.by ? " by " + esc(it.by) : "") : ""}</div>
+    <div class="sub">${it.created ? "Added " + fmtDate(it.created) + (it.by === "Claude" ? ", written by Claude in a chat" : it.by ? " by " + esc(it.by) : "") : ""}</div>
     <div class="btns"><button class="main" id="eSave">Save</button><button id="eCancel">Cancel</button><span class="spacer"></span><button class="ember" id="eHex">Hex into firewood</button></div>`);
   const fill = v => { const a = $("eRoom").value; $("eProj").innerHTML = a === "book" ? `<option value="">No project</option>` : projSelect(a, v); $("eProj").disabled = a === "book"; };
   fill(it.project); $("eRoom").onchange = () => fill("");
@@ -125,8 +124,8 @@ function openDocEdit(id, ctx) {
 function openDocHistory(id) {
   const d = S.items[id]; if (!d) return; const h = d.history || [];
   openSheet("hist", `<h3>${img("doc")} Older versions</h3><div class="sub">Every time this page changes, the old version is kept here.</div>
-    <div class="res sel" data-docver="-1"><img src="${icon("doc")}" alt=""><div><div class="t">${esc(d.title)}</div><div class="w">Current version · ${fmtDate(d.updated)}${d.by ? " · " + (d.by === "Claude" ? "by Munin" : esc(d.by)) : ""}</div></div></div>
-    ${h.map((v, n) => `<div class="res" data-docver="${n}"><img src="${icon("doc")}" alt=""><div><div class="t">${esc(v.title)}</div><div class="w">${fmtDate(v.at)} ${new Date(v.at).toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" })}${v.by ? " · " + (v.by === "Claude" ? "by Munin" : esc(v.by)) : ""} · ${esc(snip(v.body, 60))}</div></div></div>`).join("")}
+    <div class="res sel" data-docver="-1"><img src="${icon("doc")}" alt=""><div><div class="t">${esc(d.title)}</div><div class="w">Current version · ${fmtDate(d.updated)}${d.by ? " · " + (d.by === "Claude" ? "by Claude" : esc(d.by)) : ""}</div></div></div>
+    ${h.map((v, n) => `<div class="res" data-docver="${n}"><img src="${icon("doc")}" alt=""><div><div class="t">${esc(v.title)}</div><div class="w">${fmtDate(v.at)} ${new Date(v.at).toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" })}${v.by ? " · " + (v.by === "Claude" ? "by Claude" : esc(v.by)) : ""} · ${esc(snip(v.body, 60))}</div></div></div>`).join("")}
     <div class="btns"><button id="hClose">Close</button></div>`);
   $("hClose").onclick = closeSheet;
 }
@@ -226,8 +225,8 @@ function openMenu() {
       <div class="btns" style="margin-top:8px"><button class="main" id="bkSave">Download backup</button></div></div>
     <div class="card"><div class="lbl">Restore from a backup</div><div class="sub">Brings back everything in a backup file (old My Brain backups work too). Things already here stay; ones with the same id are replaced by the backup's version.</div>
       <div class="btns" style="margin-top:8px"><input type="file" id="bkFile" accept=".json,application/json"><span class="sub" id="bkStatus"></span></div></div>
-    <div class="card"><div class="lbl">Open it like an app</div><div class="sub">${SERVER ? "On your phone, open this page in your browser and use \"Add to Home Screen\" (Safari: Share, then Add to Home Screen). On your computer, use the install icon in the address bar, or the browser menu's \"Install The Cottage\". It opens in its own window, and everything stays in sync." : "On your phone, open this page in the Claude app or your browser and use \"Add to Home Screen\". On your computer, it's pinned in your Claude sidebar. Everything stays in sync either way."}</div></div>
-    <div class="card"><div class="lbl">How it's kept</div><div class="sub">${S.mode === "server" ? "Kept on your own Cottage server (Cloudflare), behind your passphrase. The same on every device, and Claude can read and add to it through your Cottage connector." : S.mode === "cloud" ? "Synced through your Claude account. It's private to you, the same on every device, and Munin (Claude) can read and add to it from your chats." : "Saved on this device only."} ${items().length} things in ${projects().length} projects, ${items().filter(i => i.kind === "doc").length} pages, ${woodpile().length} on the woodpile.</div></div>
+    <div class="card"><div class="lbl">Open it like an app</div><div class="sub">${SERVER ? "On your phone, open this page in your browser and use \"Add to Home Screen\" (Safari: Share, then Add to Home Screen). On your computer, use the install icon in the address bar, or the browser menu's \"Install The Cottage\". It opens in its own window, and everything stays in sync." : "Open your Cottage server's address to install it as an app on your phone or computer. This local copy is only for testing."}</div></div>
+    <div class="card"><div class="lbl">How it's kept</div><div class="sub">${S.mode === "server" ? "Kept on your own Cottage server (Cloudflare), behind your passphrase. The same on every device, and Claude can read and add to it through your Cottage connector." : "Saved on this device only (a local copy for testing)."} ${items().length} things in ${projects().length} projects, ${items().filter(i => i.kind === "doc").length} pages, ${woodpile().length} on the woodpile.</div></div>
     <div class="btns">${SERVER ? `<button class="ghost" id="mOut">Lock the door (sign out)</button>` : ""}<span class="spacer"></span><button id="mClose">Close</button></div>`);
   $("mClose").onclick = closeSheet; if ($("mOut")) $("mOut").onclick = signOut;
   $("sndBtn").onclick = () => { const on = !PREF.get("sound", false); PREF.set("sound", on); if (on) { audioOn(); sfx("rune"); } $("sndBtn").textContent = on ? "Sound is on" : "Sound is off"; $("sndBtn").classList.toggle("main", on); };
@@ -250,7 +249,7 @@ function openThread(pid) {
       <div class="addline" style="margin-top:0"><input type="text" id="thNew" placeholder="A new step for ${esc(p.name)}..."><button id="thNewBtn">Add</button></div>
       <label style="margin-top:8px">Or a step from anywhere<select id="thTodo"><option value="">Choose a to-do...</option>${todos.map(i => `<option value="i:${esc(i.id)}">${esc(snip(i.title, 70))} · ${esc(whereText(i))}</option>`).join("")}</select></label>
       <label style="margin-top:8px">Or a waystone<select id="thStone"><option value="">Choose a waystone...</option>${stones.map(([r, t]) => `<option value="${esc(r)}">${esc(t)}</option>`).join("")}</select></label></div>
-    <div class="btns">${SAMPLE ? `<button id="thWeave">Munin, weave it</button>` : ""}<span class="sub" id="thStatus"></span><span class="spacer"></span><button class="ghost" id="thAuto">Back to automatic</button></div>
+    <div class="btns">${MUNIN_AI ? `<button id="thWeave">Munin, weave it</button>` : ""}<span class="sub" id="thStatus"></span><span class="spacer"></span><button class="ghost" id="thAuto">Back to automatic</button></div>
     <div class="btns"><button class="main" id="thSave">Save the thread</button><button id="thCancel">Cancel</button></div>`);
   const paint = () => { $("thRows").innerHTML = refs.length ? refs.map((r, n) => { const l = label(r); return l ? `<div class="stonerow"><span class="sub" style="width:18px">${n + 1}</span><span style="flex:1;min-width:0">${l}</span><button data-tu="${n}" ${n ? "" : "disabled"} aria-label="Move up">↑</button><button data-td="${n}" ${n < refs.length - 1 ? "" : "disabled"} aria-label="Move down">↓</button><button class="ember" data-tx="${n}" aria-label="Remove">×</button></div>` : ""; }).join("") : `<div class="empty">No steps yet.</div>`; };
   paint();
@@ -264,7 +263,7 @@ function openThread(pid) {
   $("thSave").onclick = () => { put("projects", pid, { ...p, thread: refs }); closeSheet(); toast("Thread saved"); };
   $("thCancel").onclick = closeSheet;
   if ($("thWeave")) $("thWeave").onclick = async () => { $("thStatus").textContent = "Munin is weaving..."; $("thWeave").disabled = true;
-    try { const out = await weave(p); if (out && out.length) { refs = out; paint(); $("thStatus").textContent = "Here's Munin's thread. Save it if it looks right."; } else $("thStatus").textContent = "Munin couldn't find a thread this time."; }
+    try { const out = await weave(p); if (out && out.length) { refs = out; paint(); $("thStatus").innerHTML = brainBadge("hearth") + " wove this thread. Save it if it looks right."; } else $("thStatus").textContent = "Munin couldn't find a thread this time."; }
     catch (e) { $("thStatus").textContent = "Munin couldn't weave it this time."; } $("thWeave").disabled = false; };
 }
 
@@ -287,7 +286,7 @@ function openTie(fromRef) {
 function openSatchel(which) {
   const all = items();
   if (which === "new") { const f = all.filter(i => isNew(i) && !isRune(i)).sort(byNew);
-    openSheet("satchel", `<h3>${img("feather")} New from Munin</h3><div class="sub">Brought in from your chats with Claude. Opening one marks it read.</div>${list(f, "All caught up.", { where: true })}<div class="btns"><button data-seenall>Mark all read</button><button id="sClose">Close</button></div>`); }
+    openSheet("satchel", `<h3>${img("feather")} New from Munin</h3><div class="sub">Written by Claude in your chats; Munin carried them home. Opening one marks it read.</div>${list(f, "All caught up.", { where: true })}<div class="btns"><button data-seenall>Mark all read</button><button id="sClose">Close</button></div>`); }
   else { const q = all.filter(openQ).sort(byOld);
     openSheet("satchel", `<h3>${img("question")} Waiting on you</h3><div class="sub">Questions only you can answer. Answered ones move to Decided.</div>${list(q, "Nothing waiting.", { where: true })}<div class="btns"><button id="sClose">Close</button></div>`); }
   $("sClose").onclick = closeSheet;

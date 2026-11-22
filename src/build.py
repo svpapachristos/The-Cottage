@@ -1,8 +1,7 @@
-# Builds The Cottage.
-#   ../index.html          the page for the claude.ai artifact (publish it there)
-#   ../server/public/      the same page for your own Cottage server, plus what makes it installable as an app
+# Builds The Cottage into ../server/public/: the app page your Cottage server hands out, plus what makes it installable.
 # It joins the page shell with every script in js/ (in name order) and embeds the m5x7 font (Daniel Linssen, CC0).
-# Run:  python build.py
+# For a quick local test, open server/public/index.html straight from disk: it runs in local mode (this browser only).
+# Run:  python src/build.py   (from the repo root, or python build.py from here)
 import base64, glob, json, os, struct, zlib
 here = os.path.dirname(os.path.abspath(__file__))
 root = os.path.join(here, "..")
@@ -14,8 +13,6 @@ page = shell.replace("FONT_B64", font).replace("/*SCRIPTS*/", "\n".join(scripts)
 def write(path, text):
     os.makedirs(os.path.dirname(path), exist_ok=True)
     open(path, "w", encoding="utf-8", newline="\n").write(text)
-
-write(os.path.join(root, "index.html"), page.replace("<!--PWA-->", ""))
 
 # ---- the server copy, installable as an app
 pwa = ('<link rel="manifest" href="manifest.webmanifest">\n<link rel="icon" href="icon-192.png">\n'
@@ -74,4 +71,4 @@ png(os.path.join(pub, "icon-192.png"), 192, 16)
 png(os.path.join(pub, "icon-512.png"), 512, 32)
 png(os.path.join(pub, "icon-maskable-512.png"), 512, 96)
 png(os.path.join(pub, "apple-touch-icon.png"), 180, 18)
-print(len(page.encode()), "bytes,", len(scripts), "scripts; wrote index.html and server/public/")
+print(len(page.encode()), "bytes,", len(scripts), "scripts; wrote server/public/")

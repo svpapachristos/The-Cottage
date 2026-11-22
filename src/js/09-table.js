@@ -22,9 +22,11 @@ function logURL() {
   return LOG_URL = c.toDataURL();
 }
 // The logs by the hearth, placed in room pixels as percentages so they scale with any size of fireplace.
+// Each log carries a name tag (what it was, when it was hexed): tap a log to read it, and it rides along while you drag.
+function logName(col, o) { return { name: o.title || o.name || "Something old", what: (col === "projects" ? "Project" : KINDS[o.kind] || "Note") + (o.wood ? " · hexed " + fmtDate(o.wood) : "") }; }
 function logsHTML(wood) {
-  return wood.slice(0, 9).map(({ col, o }, n) => { const lx = 31 + (n % 3) * 4 + (Math.floor(n / 3) % 2 ? 2 : 0), ly = 42 - 8 - Math.floor(n / 3) * 3;
-    return `<button class="log" data-log="${col}:${esc(o.id)}" style="left:${(lx / 71 * 100).toFixed(2)}%;top:${(ly / 42 * 100).toFixed(2)}%" title="${esc(o.title || o.name)}" aria-label="Log: ${esc(o.title || o.name)}. Drag into the fire to burn it"><img src="${logURL()}" alt=""></button>`; }).join("")
+  return wood.slice(0, 9).map(({ col, o }, n) => { const lx = 31 + (n % 3) * 4 + (Math.floor(n / 3) % 2 ? 2 : 0), ly = 42 - 8 - Math.floor(n / 3) * 3, L = logName(col, o);
+    return `<button class="log" data-log="${col}:${esc(o.id)}" style="left:${(lx / 71 * 100).toFixed(2)}%;top:${(ly / 42 * 100).toFixed(2)}%" aria-label="Log: ${esc(L.name)}, ${esc(L.what)}. Drag into the fire to burn it"><img src="${logURL()}" alt=""><span class="logtag" aria-hidden="true"><b>${esc(snip(L.name, 48))}</b><small>${esc(L.what)}</small></span></button>`; }).join("")
     + (wood.length > 9 ? `<span class="morelogs">+${wood.length - 9}</span>` : "");
 }
 function fireplaceHTML(wood, id) {
@@ -40,6 +42,7 @@ function wireFireplace(id, onBurn) {
     el.onpointerdown = e => {
       e.preventDefault(); el.setPointerCapture(e.pointerId);
       const start = { x: e.clientX, y: e.clientY }; let moved = false;
+      box.querySelectorAll(".log.show").forEach(x => { if (x !== el) x.classList.remove("show"); });
       el.classList.add("dragging");
       el.onpointermove = ev => { const dx = ev.clientX - start.x, dy = ev.clientY - start.y; if (Math.abs(dx) + Math.abs(dy) > 4) moved = true; el.style.transform = `translate(${dx}px, ${dy}px) rotate(${dx / 12}deg)`; };
       el.onpointerup = el.onpointercancel = async ev => {
@@ -51,7 +54,7 @@ function wireFireplace(id, onBurn) {
           setTimeout(async () => { await burnOne(col, oid); toast(`"${snip(o ? o.title || o.name : "", 40)}" went up in sparks`); if (onBurn) onBurn(); }, 380);
         } else {
           el.style.transition = "transform .3s ease"; el.style.transform = ""; setTimeout(() => { el.style.transition = ""; }, 320);
-          if (!moved) toast("Drag this log into the fire to burn it for good");
+          if (!moved) { el.classList.toggle("show"); clearTimeout(el.tagT); if (el.classList.contains("show")) { sfx("rune"); el.tagT = setTimeout(() => el.classList.remove("show"), 4000); } }
         }
       };
     };

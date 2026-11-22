@@ -1,5 +1,22 @@
 // ============================================================ 05 · Munin: the cottage's raven. He sorts runes, carries them to rooms, answers questions, and keeps you company.
-// In Norse myth Munin means "memory". Here he is Claude, living in the cottage.
+// In Norse myth Munin means "memory". He is the keeper (his Hearth brain is a small free model on the server, plus plain code)
+// and the messenger between the cottage and Claude, who does the deep thinking in chats through the Cottage connector.
+
+// ---- the brain badge: wherever Munin answers, it shows which brain is talking
+//   Hearth brain  the small free model on the Cottage server (uses none of Sophia's Claude usage)
+//   Claude        the thinker, in a chat through the Cottage connector; Munin carries what it writes home
+//   Plain code    no AI at all: Munin's own rules
+const MODEL_NAMES = [[/llama-4-scout/i, "Llama 4 Scout"], [/mistral-small/i, "Mistral Small"], [/llama-3\.1-8b/i, "Llama 3.1 8B"]];
+function modelName(m) { m = String(m || ""); const hit = MODEL_NAMES.find(([re]) => re.test(m)); return hit ? hit[1] : m.replace(/^@cf\/[^/]+\//, ""); }
+const brainNow = () => MUNIN_AI ? "hearth" : "code";
+function brainBadge(who, model) {
+  if (who === "claude") return `<span class="brain claude" title="Written by Claude in a chat, through your Cottage connector. Munin carried it home.">${img("feather")} Claude</span>`;
+  if (who === "hearth") { const n = modelName(model || BRAIN.model); return `<span class="brain hearth" title="Munin's Hearth brain: ${n ? esc(n) + ", " : ""}a small free model on your Cottage server. It uses none of your Claude usage.">Hearth brain${n ? " · " + esc(n) : ""}</span>`; }
+  return `<span class="brain code" title="No AI here: Munin's own rules, written in code.">Plain code</span>`;
+}
+function brainRow() {
+  return `<div class="brainrow"><span>Answering here:</span>${brainBadge(brainNow())}<span>Deep thinking:</span>${brainBadge("claude")}<span>in your chats</span></div>`;
+}
 
 // ---- what Munin says on the home screen: the most useful thing first
 function muninLine() {
@@ -33,7 +50,7 @@ function doSay(act) {
 const ASK_CHIPS = ["What should I focus on today?", "What's waiting on me?", "Where does each game stand?", "What's my plan for money right now?", "What did we get done lately?"];
 function openMunin() {
   const runes = items().filter(isRune).length, say = muninLine();
-  openSheet("munin", `<div class="mhead"><canvas id="muninBig" width="16" height="16"></canvas><div><h3>Munin</h3><div class="say">${esc(say.text)}</div></div></div>
+  openSheet("munin", `<div class="mhead"><canvas id="muninBig" width="16" height="16"></canvas><div><h3>Munin</h3><div class="say">${esc(say.text)}</div>${brainRow()}</div></div>
     <div class="mgrid">
       <button data-m="rune"><b>Write a rune</b><span>Anything on your mind</span></button>
       <button data-m="book"><b>Sort the book</b><span>${runes ? runes + " waiting" : "Nothing waiting"}</span></button>
@@ -47,7 +64,7 @@ function openMunin() {
     <div class="chips">${ASK_CHIPS.map(q => `<button class="chip" data-ask="${esc(q)}">${esc(q)}</button>`).join("")}</div>
     <div id="askLog"></div>
     <form id="askForm" style="display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap"><textarea id="askIn" rows="2" placeholder="Ask about your projects, plans or notes..." style="flex:1 1 240px"></textarea><div class="btns"><button class="main" type="submit">Ask</button><button type="button" id="askWrite" title="Save what you typed as a rune instead">Write it down</button></div></form>
-    <div class="sub" id="askNote">${SAMPLE ? "I answer only from what's written in the cottage." : S.mode === "local" ? "Asking works when The Cottage is opened from claude.ai." : "Asking isn't available in this view."}</div>`);
+    <div class="sub" id="askNote">${MUNIN_AI ? "I answer only from what's written in the cottage." : S.mode === "local" ? "Asking works when The Cottage is opened from your Cottage server." : "Asking isn't available right now."}</div>`);
   S.flash.munin = Date.now(); sfx("caw");
   drawChat();
   $("sheet").querySelector(".mgrid").onclick = e => { const b = e.target.closest("[data-m]"); if (!b) return; const m = b.dataset.m; closeSheet();
@@ -72,10 +89,10 @@ function answerHTML(text) {
     const it = S.items[id]; return it ? `<span class="ref" data-ref="i:${esc(id)}">${esc(snip(it.title, 48))}</span>` : "";
   });
 }
-function drawChat() { const L = $("askLog"); if (!L) return; L.innerHTML = S.chat.map(m => m.role === "user" ? `<div class="q">${esc(m.content)}</div>` : `<div class="a">${m.content ? answerHTML(m.content) : '<span class="sub">Munin is thinking...</span>'}</div>`).join(""); const last = L.lastElementChild; if (last) last.scrollIntoView({ block: "nearest" }); }
+function drawChat() { const L = $("askLog"); if (!L) return; L.innerHTML = S.chat.map(m => m.role === "user" ? `<div class="q">${esc(m.content)}</div>` : `<div class="a">${brainBadge("hearth", m.model)}${m.content ? answerHTML(m.content) : '<span class="sub">Munin is thinking...</span>'}</div>`).join(""); const last = L.lastElementChild; if (last) last.scrollIntoView({ block: "nearest" }); }
 let asking = false;
 async function ask(q) {
-  q = (q || "").trim(); if (!q || asking || !SAMPLE) return;
+  q = (q || "").trim(); if (!q || asking || !MUNIN_AI) return;
   asking = true; $("askIn").value = ""; S.flash.munin = Date.now();
   S.chat.push({ role: "user", content: q }); const ans = { role: "assistant", content: "" }; S.chat.push(ans); drawChat();
   const intro = `You are Munin, the raven who keeps Sophia's cottage. The cottage is her personal organizer: she's a Computer Science student and indie game developer (studio: Hedgewitch Games) working toward income now (a job that isn't retail, or money from her games), getting back into school, and a game-dev career.
@@ -87,14 +104,14 @@ When you mention a specific note, page or project, add its reference right after
 ${brainText()}`;
   const hist = S.chat.slice(0, -1).slice(-7); while (hist.length && hist[0].role !== "user") hist.shift();
   const msgs = hist.map((m, i) => ({ role: m.role, content: i === 0 ? intro + "\n\nQUESTION: " + m.content : m.content }));
-  try { const r = await SAMPLE(msgs, { cache: false, onText: ({ text }) => { ans.content = text; drawChat(); } }); ans.content = r.text || ans.content; }
-  catch (e) { ans.content = (e && e.text) || (e && e.code === "not_granted" ? "I need your OK to think. Try again and allow it when asked." : e && e.code === "rate_limited" ? "My feathers need a moment. Try again in a minute." : "Something went wrong while I was thinking. Try again."); }
+  try { const r = await MUNIN_AI(msgs, { cache: false, onText: ({ text }) => { ans.content = text; drawChat(); } }); ans.content = r.text || ans.content; ans.model = r.model; }
+  catch (e) { ans.content = (e && e.text) || (e && e.code === "rate_limited" ? "My feathers need a moment. Try again in a minute." : "Something went wrong while I was thinking. Try again."); }
   asking = false; drawChat();
 }
 
 // ---- runes: write them into the book, sort them, send them
 function inscribe(text, single) {   // returns the ids of the new runes
-  text = String(text || "").trim(); if (!text) return []; if (S.readOnly) { toast("Read-only here"); return []; }
+  text = String(text || "").trim(); if (!text) return [];
   let chunks;
   if (single) chunks = [text];
   else {
@@ -116,7 +133,7 @@ function inscribe(text, single) {   // returns the ids of the new runes
 }
 // Munin reads new runes right away. The ones he's sure about, he carries to their rooms; the rest wait in the book with his suggestion.
 function autoFile(ids) {
-  if (!SAMPLE || !PREF.get("autofile", true) || !ids || !ids.length) return false;
+  if (!MUNIN_AI || !PREF.get("autofile", true) || !ids || !ids.length) return false;
   const runes = ids.map(id => S.items[id]).filter(Boolean);
   S.flash.munin = Date.now();
   classify(runes.map(l => l.title + (l.body ? "\n" + l.body : ""))).then(out => {
@@ -135,13 +152,13 @@ Areas: games = Hedgewitch Games (her small witchy browser games, the website, it
 Projects: ${projects().map(p => p.id + " = " + p.name + " (" + p.area + ")").join("; ")}.
 "todo" = something to do; "question" = something to decide or answer later; "decision" = something already decided; "idea" = a possible future thing; "link" = mainly a URL; "doc" = a long plan or document with several parts; otherwise "note". Pick a project only when the note is clearly about it.
 Notes: ${JSON.stringify(texts.map(t => t.slice(0, 1500)))}`;
-  const v = typeof SAMPLE.json === "function" ? await SAMPLE.json(prompt, { modelTier: "quick" }) : JSON.parse((await SAMPLE(prompt, { modelTier: "quick" })).text);
+  const v = await MUNIN_AI.json(prompt);
   const arr = Array.isArray(v) ? v : (v && Array.isArray(v.notes) ? v.notes : [v]);
   return arr.map(x => x && typeof x === "object" ? { kind: KINDS[x.kind] && x.kind !== "log" ? x.kind : "note", area: ROOMS[x.area] && x.area !== "book" ? x.area : "life", project: live(S.projects[x.project]) ? x.project : "", title: String(x.title || "").slice(0, 120), sure: x.sure === true } : null);
 }
 async function sortBook() {
   const runes = items().filter(isRune).sort(byOld);
-  if (!SAMPLE || !runes.length) return;
+  if (!MUNIN_AI || !runes.length) return;
   const b = $("sortAll"); if (b) { b.textContent = "Munin is reading..."; b.disabled = true; }
   S.flash.munin = Date.now();
   try {
@@ -193,7 +210,7 @@ Project: ${p.name}. Status: ${p.status || "?"}. Next: ${p.next || "?"}. About: $
 To-dos you may use (ref = title, project): ${cands.map(i => "i:" + i.id + " = " + i.title + ", " + (projOf(i) ? projOf(i).name : "")).join("; ")}
 Waystones: ${stones.map(s => s.ref + " = " + s.t).join("; ")}
 Prefer this project's own to-dos, add another project's to-do only when this project truly needs it, and end with the nearest unreached waystone it helps reach.`;
-  const v = typeof SAMPLE.json === "function" ? await SAMPLE.json(prompt, { modelTier: "quick" }) : JSON.parse((await SAMPLE(prompt, { modelTier: "quick" })).text);
+  const v = await MUNIN_AI.json(prompt);
   const arr = Array.isArray(v) ? v : v && Array.isArray(v.steps) ? v.steps : [];
   return arr.map(x => typeof x === "string" ? (resolve(x) ? x : null) : x && x.t ? { t: String(x.t).slice(0, 140), d: false } : null).filter(Boolean).slice(0, 10);
 }

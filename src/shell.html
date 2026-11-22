@@ -172,6 +172,14 @@ h3.sec .r { margin-left: auto; font: 14px system-ui, sans-serif; }
 .rune .file select { font-size: 13px; padding: 5px 6px; max-width: 46%; }
 .rune .sug { color: var(--mint); font-size: 12.5px; margin-top: 6px; }
 .rune .from { color: var(--gold); font-size: 12px; margin-top: 4px; }
+/* the brain badge: which brain is answering */
+.brain { display: inline-flex; align-items: center; gap: 4px; font: 12px/1 system-ui, sans-serif; padding: 3px 8px; border-radius: 999px; border: 1px solid; white-space: nowrap; vertical-align: middle; cursor: help; }
+.brain img.pi { width: 12px; height: 12px; }
+.brain.hearth { color: var(--ember); border-color: #7a4a28; background: rgba(255,154,80,.08); }
+.brain.claude { color: var(--gold); border-color: #8a6a20; background: rgba(255,208,112,.06); }
+.brain.code { color: var(--dim); border-color: var(--line); }
+.brainrow { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-top: 8px; font-size: 12px; color: var(--dim); }
+.a > .brain { display: flex; width: max-content; margin-bottom: 6px; }
 .flyer { position: fixed; z-index: 40; width: 48px; height: 36px; pointer-events: none; }
 /* floating buttons */
 .fabs { position: fixed; right: calc(20px + env(safe-area-inset-right)); bottom: calc(18px + env(safe-area-inset-bottom)); display: flex; flex-direction: column; gap: 10px; z-index: 15; }
@@ -334,6 +342,14 @@ body.signedout .fabs { display: none; }
 .log:hover img { filter: drop-shadow(0 0 4px #ffd070); }
 .log.dragging { cursor: grabbing; z-index: 5; }
 .log.burning { transition: transform .38s ease-in, opacity .38s ease-in; opacity: 0; transform: scale(.2) !important; }
+/* a log's name tag: tap to read it; it follows the log while you drag */
+.logtag { display: none; position: absolute; bottom: calc(100% + 6px); left: 50%; transform: translateX(-50%); pointer-events: none; background: rgba(12,6,24,.94); border: 1.5px solid #7a4a28; border-radius: 8px; padding: 5px 9px; text-align: center; white-space: nowrap; max-width: 220px; z-index: 6; box-shadow: 0 3px 0 rgba(0,0,0,.4); }
+.logtag b { display: block; font-weight: 600; font-size: 13px; color: var(--text); overflow: hidden; text-overflow: ellipsis; }
+.logtag small { display: block; font-size: 11px; color: var(--ember); margin-top: 2px; }
+.logtag::after { content: ""; position: absolute; top: 100%; left: 50%; margin-left: -5px; border: 5px solid transparent; border-top-color: #7a4a28; }
+.log.show .logtag, .log.dragging .logtag, .log:focus-visible .logtag { display: block; }
+@media (hover: hover) { .log:hover .logtag { display: block; } }
+.log.show, .log:hover { z-index: 4; }
 .morelogs { position: absolute; right: 6px; bottom: 6px; font-size: 12px; color: var(--gold); background: rgba(12,6,24,.8); padding: 1px 6px; border-radius: 999px; }
 .obj.basket { border-style: dashed; }
 /* the closing ritual */
@@ -409,7 +425,7 @@ footer { color: #5a4a78; font-size: 12px; text-align: center; margin-top: 34px; 
   </header>
   <div id="banner"></div>
   <main id="view"></main>
-  <footer>The Cottage: a little Hedgewitch home for everything you know and plan. Synced through your Claude account, so it's the same on your phone and computer, and Munin (Claude) can read and add to it from any chat.</footer>
+  <footer>The Cottage: a little Hedgewitch home for everything you know and plan.</footer>
 </div>
 <div class="fabs">
   <button class="fab" id="muninFab" aria-label="Call Munin" title="Munin"><canvas id="muninFabCv" width="16" height="16"></canvas></button>

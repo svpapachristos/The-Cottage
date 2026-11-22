@@ -1,7 +1,10 @@
 // ============================================================ 01 · data: the rooms, what's saved, and how it syncs
 // Everything lives in two collections, "items" and "projects", plus a few "meta" documents.
-// In claude.ai they sync through the artifact database (same on every device, readable by Claude in any chat).
-// Opened anywhere else, they're kept in this browser only (localStorage).
+// Two ways to run:
+//   server mode  opened from Sophia's own Cottage server: synced through its API, the same on every device,
+//                and readable by Claude in any chat through the Cottage connector. This is the real Cottage.
+//   local mode   opened as a file (for testing): kept in this browser only (localStorage).
+// (The old claude.ai artifact mode was retired in phase 1 of the blueprint, 21 Nov 2026.)
 
 const ROOMS = {
   stargazer: { name: "Observatory", what: "Stargazer", r: [8, 38, 71, 38] },
@@ -31,14 +34,14 @@ const DEFAULT_ROAD = {
   games: [
     { id: "w-g-studio", title: "Studio named: Hedgewitch Games", done: true },
     { id: "w-g-itch", title: "A game on itch.io (Witchbottle)", done: true },
-    { id: "w-g-site", title: "Website live", done: false },
-    { id: "w-g-ads", title: "Ads on the website", done: false },
+    { id: "w-g-site", title: "Website live", done: true },
+    { id: "w-g-ads", title: "Ads on the website", done: true },
     { id: "w-g-dollar", title: "First dollar from games", done: false },
     { id: "w-g-paid", title: "First paid game", done: false },
     { id: "w-g-steam", title: "A game on Steam", done: false },
   ],
   school: [
-    { id: "w-s-path", title: "Choose the path: CS or computer engineering", done: false },
+    { id: "w-s-path", title: "Choose the path: CS or computer engineering", done: true },
     { id: "w-s-papers", title: "Reapplication paperwork done", done: false },
     { id: "w-s-enrolled", title: "Enrolled again", done: false },
     { id: "w-s-intern", title: "An internship", done: false },
@@ -47,8 +50,10 @@ const DEFAULT_ROAD = {
 const HW = 160, HH = 224;                                    // the house picture, in pixels before scaling
 const RW = 160, RH = 84;                                     // the road picture
 
-const S = { items: {}, projects: {}, meta: {}, ready: false, mode: "loading", note: "", open: new Set(), chat: [], readOnly: false, hover: null, pending: false, flash: {}, drawer: {}, table: { running: false, start: 0, mins: 25, left: 0 } };
-let DB = null, SAMPLE = null, DL = null, SERVER = false;   // SERVER: running on Sophia's own Cottage server
+const S = { items: {}, projects: {}, meta: {}, ready: false, mode: "loading", note: "", open: new Set(), chat: [], hover: null, pending: false, flash: {}, drawer: {}, table: { running: false, start: 0, mins: 25, left: 0 } };
+let MUNIN_AI = null, SERVER = false;   // MUNIN_AI: Munin's Hearth brain (null when there isn't one); SERVER: running on Sophia's own Cottage server
+// Which brain is answering, for the badge: the Hearth brain's model name (from the server), or "" when Munin only has plain code.
+const BRAIN = { model: "" };
 const $ = id => document.getElementById(id);
 const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 const newId = p => p + "-" + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
@@ -103,34 +108,21 @@ const PREF = {   // per-device settings (sound), never synced
   get(k, d) { try { const v = localStorage.getItem("cottage_pref_" + k); return v === null ? d : JSON.parse(v); } catch (e) { return d; } },
   set(k, v) { try { localStorage.setItem("cottage_pref_" + k, JSON.stringify(v)); } catch (e) {} },
 };
-const queues = {};
-function enqueue(path, fn) { const p = (queues[path] || Promise.resolve()).then(fn, fn); queues[path] = p.catch(() => {}); return p; }
-function writeError(e) {
-  const code = e && e.code;
-  if (code === "invalid_argument" || code === "permission_denied") { S.readOnly = true; S.note = "The cottage is read-only here, so changes aren't being saved."; }
-  else if (code === "quota_exceeded") S.note = "The cottage is full. Burn some firewood to make room.";
-  else if (code === "revoked") S.note = "This page lost access to your cottage. Reopen it from claude.ai.";
-  else S.note = "A change didn't save. Check your connection and try again.";
-  render();
-}
 function put(col, id, data) {
   const body = { ...data, updated: Date.now() }; delete body.id;
   for (const k of Object.keys(body)) if (body[k] === undefined) delete body[k];
   S[col][id] = { ...body, id }; render();
   if (SERVER) return serverWrite(col, id, body);
-  if (DB) return enqueue(col + "/" + id, () => DB.collection(col).doc(id).set(body).catch(writeError));
   const all = LS.get(col); all[id] = body; LS.set(col, all); return Promise.resolve();
 }
 function del(col, id) {
   delete S[col][id]; render();
   if (SERVER) return serverWrite(col, id, null);
-  if (DB) return enqueue(col + "/" + id, () => DB.collection(col).doc(id).delete().catch(writeError));
   const all = LS.get(col); delete all[id]; LS.set(col, all); return Promise.resolve();
 }
 function putMeta(key, data) {
   S.meta[key] = data; render();
   if (SERVER) return serverWrite("meta", key, data);
-  if (DB) return enqueue("meta/" + key, () => DB.doc("meta/" + key).set(data).catch(writeError));
   const m = LS.get("meta"); m[key] = data; LS.set("meta", m); return Promise.resolve();
 }
 // Small helpers so the rest of the code reads like what it does.
@@ -147,7 +139,7 @@ function hex(col, id, fromEl) { const o = S[col][id]; if (!o) return; toss(fromE
 function unhex(col, id) { const o = S[col][id]; if (!o) return; const d = { ...o }; delete d.wood; put(col, id, d); }
 const woodpile = () => [...Object.values(S.items).filter(i => i.wood).map(i => ({ col: "items", o: i })), ...Object.values(S.projects).filter(p => p.wood).map(p => ({ col: "projects", o: p }))].sort((a, b) => b.o.wood - a.o.wood);
 async function burnOne(col, id) { await del(col, id); S.flash.fire = Date.now(); sfx("burn"); }
-async function burnAll() { const w = woodpile(); for (const { col, o } of w) { await del(col, o.id); if (DB) await new Promise(r => setTimeout(r, 40)); } S.flash.fire = Date.now(); sfx("burn"); return w.length; }
+async function burnAll() { const w = woodpile(); for (const { col, o } of w) await del(col, o.id); S.flash.fire = Date.now(); sfx("burn"); return w.length; }
 // Pages keep their old versions, so a changed plan never loses how we got here.
 function savePage(it, title, body) {
   const hist = Array.isArray(it.history) ? it.history.slice() : [];
@@ -158,35 +150,13 @@ function savePage(it, title, body) {
 // ============================================================ loading
 async function init() {
   drawIcons(); route(); tick();
-  let db = null;
-  if (window.claude && typeof window.claude.use === "function") {
-    window.claude.use("sample").then(s => { SAMPLE = s; render(); }).catch(() => {});
-    window.claude.use("downloads").then(d => { DL = d; }).catch(() => {});
-    try { db = await window.claude.use("db"); } catch (e) { db = null; }
-  }
-  if (db) { DB = db; S.mode = "cloud"; subscribe(); }
-  else if (await serverStart()) { /* running on the Cottage server */ }
+  if (await serverStart()) { /* running on the Cottage server */ }
   else {
     S.mode = "local"; S.items = LS.get("items"); S.projects = LS.get("projects"); S.meta = LS.get("meta"); S.ready = true;
     for (const [id, v] of Object.entries(S.items)) v.id = id; for (const [id, v] of Object.entries(S.projects)) v.id = id;
     render();
   }
 }
-function subscribe() {
-  const got = { items: false, projects: false };
-  const timer = setTimeout(() => { if (!S.ready) { S.note = "Can't reach your cottage yet. It will appear as soon as the connection comes back."; render(); } }, 10000);
-  const onErr = e => { clearTimeout(timer); S.ready = true; S.note = e && e.code === "revoked" ? "This page lost access to your cottage. Reopen it from claude.ai." : "Part of your cottage couldn't load (" + ((e && e.code) || "error") + "). Reopen the page to try again."; render(); };
-  const take = (col, snap) => {
-    const o = {}; for (const d of snap.docs) o[d.id] = { ...d.data(), id: d.id };
-    S[col] = o; got[col] = true;
-    if (got.items && got.projects) { S.ready = true; if (!snap.metadata || !snap.metadata.fromCache) { clearTimeout(timer); if (S.note.startsWith("Can't reach")) S.note = ""; } }
-    render();
-  };
-  DB.collection("items").onSnapshot(s => take("items", s), onErr);
-  DB.collection("projects").onSnapshot(s => take("projects", s), onErr);
-  DB.collection("meta").onSnapshot(s => { const m = {}; for (const d of s.docs) m[d.id] = d.data(); S.meta = m; render(); }, () => {});
-}
-
 // ============================================================ backups
 function backupData() {
   const strip = o => { const d = { ...o }; delete d.id; return d; };
@@ -196,9 +166,8 @@ function backupData() {
 async function backup() {
   const name = "the-cottage-backup-" + dayKey() + ".json", data = JSON.stringify(backupData(), null, 1);
   try {
-    if (DL) { await DL.save({ filename: name, data }); toast("Backup saved"); return; }
     const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob([data], { type: "application/json" })); a.download = name; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 2000); toast("Backup saved");
-  } catch (e) { toast(e && e.code === "declined" ? "Backup cancelled" : "Couldn't save the backup here"); }
+  } catch (e) { toast("Couldn't save the backup here"); }
 }
 async function restore(file, status) {
   let data; try { data = JSON.parse(await file.text()); } catch (e) { status("That file isn't a Cottage backup."); return; }
@@ -214,7 +183,7 @@ async function restore(file, status) {
     if (mops.length) await apiCall("POST", "/api/batch", { ops: mops });
     SV.rev = 0; await serverSync(); status(`Restored ${n} things.`); toast("Backup restored"); return;
   }
-  for (const [col, id, v] of jobs) { if (!v || typeof v !== "object" || !/^[\w.~:@+-]{1,180}$/.test(id)) continue; await put(col, id, v); n++; status(`Restoring ${n} of ${jobs.length}...`); if (DB) await new Promise(r => setTimeout(r, 60)); }
+  for (const [col, id, v] of jobs) { if (!v || typeof v !== "object" || !/^[\w.~:@+-]{1,180}$/.test(id)) continue; await put(col, id, v); n++; status(`Restoring ${n} of ${jobs.length}...`); }
   const meta = data.meta || (data.focus ? { focus: data.focus } : {});
   for (const [k, v] of Object.entries(meta)) if (v && typeof v === "object" && /^[\w-]{1,40}$/.test(k)) await putMeta(k, v);
   status(`Restored ${n} things.`); toast("Backup restored");
@@ -280,7 +249,7 @@ function untie(fromRef, toRef) {
 
 
 // ============================================================ the Cottage server: Sophia's own home for the data
-// When the app is opened from its own server (not inside claude.ai), it talks to the server's API:
+// When the app is opened from its own server, it talks to the server's API:
 // changes are sent right away (and queued if the connection drops), and it checks for changes from other devices every few seconds.
 const SV = { rev: 0, outbox: [], timer: 0, syncing: false };
 async function apiCall(method, path, body) {
@@ -298,6 +267,7 @@ async function serverStart() {
   if (r.status === 401 && kind.includes("json")) { SERVER = true; S.mode = "server"; showSignIn(); return true; }
   if (!r.ok || !kind.includes("json")) return false;
   SERVER = true; S.mode = "server";
+  try { BRAIN.model = (await r.json()).model || ""; } catch (e) { }
   SV.outbox = (LS.get("cottage_outbox") || {}).ops || [];
   const c = LS.get("cottage_cache"); if (c && c.rev) { loadCache(c); S.ready = true; render(); }
   setupServerMunin();
@@ -342,11 +312,11 @@ function flushOutbox() {
   })().finally(() => { flushing = null; });
   return flushing;
 }
-// Munin's brain on the server: Workers AI, behind the same two calls the claude.ai version uses.
+// Munin's Hearth brain: a small free model on the server (Workers AI). Each answer says which model gave it.
 function setupServerMunin() {
-  const chat = async (msgs, opts = {}) => { const r = await apiCall("POST", "/api/ai/chat", { messages: typeof msgs === "string" ? [{ role: "user", content: msgs }] : msgs }); if (opts.onText) opts.onText({ text: r.text }); return { text: r.text }; };
-  chat.json = async prompt => (await apiCall("POST", "/api/ai/json", { prompt })).result;
-  SAMPLE = chat;
+  const chat = async (msgs, opts = {}) => { const r = await apiCall("POST", "/api/ai/chat", { messages: typeof msgs === "string" ? [{ role: "user", content: msgs }] : msgs }); if (r.model) BRAIN.model = r.model; if (opts.onText) opts.onText({ text: r.text }); return { text: r.text, model: r.model || BRAIN.model }; };
+  chat.json = async prompt => { const r = await apiCall("POST", "/api/ai/json", { prompt }); if (r.model) BRAIN.model = r.model; return r.result; };
+  MUNIN_AI = chat;
 }
 function showSignIn(msg) {
   S.mode = "server"; S.ready = false; S.signin = true; document.body.classList.add("signedout");

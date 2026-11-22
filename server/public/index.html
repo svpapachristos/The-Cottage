@@ -177,6 +177,14 @@ h3.sec .r { margin-left: auto; font: 14px system-ui, sans-serif; }
 .rune .file select { font-size: 13px; padding: 5px 6px; max-width: 46%; }
 .rune .sug { color: var(--mint); font-size: 12.5px; margin-top: 6px; }
 .rune .from { color: var(--gold); font-size: 12px; margin-top: 4px; }
+/* the brain badge: which brain is answering */
+.brain { display: inline-flex; align-items: center; gap: 4px; font: 12px/1 system-ui, sans-serif; padding: 3px 8px; border-radius: 999px; border: 1px solid; white-space: nowrap; vertical-align: middle; cursor: help; }
+.brain img.pi { width: 12px; height: 12px; }
+.brain.hearth { color: var(--ember); border-color: #7a4a28; background: rgba(255,154,80,.08); }
+.brain.claude { color: var(--gold); border-color: #8a6a20; background: rgba(255,208,112,.06); }
+.brain.code { color: var(--dim); border-color: var(--line); }
+.brainrow { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-top: 8px; font-size: 12px; color: var(--dim); }
+.a > .brain { display: flex; width: max-content; margin-bottom: 6px; }
 .flyer { position: fixed; z-index: 40; width: 48px; height: 36px; pointer-events: none; }
 /* floating buttons */
 .fabs { position: fixed; right: calc(20px + env(safe-area-inset-right)); bottom: calc(18px + env(safe-area-inset-bottom)); display: flex; flex-direction: column; gap: 10px; z-index: 15; }
@@ -339,6 +347,14 @@ body.signedout .fabs { display: none; }
 .log:hover img { filter: drop-shadow(0 0 4px #ffd070); }
 .log.dragging { cursor: grabbing; z-index: 5; }
 .log.burning { transition: transform .38s ease-in, opacity .38s ease-in; opacity: 0; transform: scale(.2) !important; }
+/* a log's name tag: tap to read it; it follows the log while you drag */
+.logtag { display: none; position: absolute; bottom: calc(100% + 6px); left: 50%; transform: translateX(-50%); pointer-events: none; background: rgba(12,6,24,.94); border: 1.5px solid #7a4a28; border-radius: 8px; padding: 5px 9px; text-align: center; white-space: nowrap; max-width: 220px; z-index: 6; box-shadow: 0 3px 0 rgba(0,0,0,.4); }
+.logtag b { display: block; font-weight: 600; font-size: 13px; color: var(--text); overflow: hidden; text-overflow: ellipsis; }
+.logtag small { display: block; font-size: 11px; color: var(--ember); margin-top: 2px; }
+.logtag::after { content: ""; position: absolute; top: 100%; left: 50%; margin-left: -5px; border: 5px solid transparent; border-top-color: #7a4a28; }
+.log.show .logtag, .log.dragging .logtag, .log:focus-visible .logtag { display: block; }
+@media (hover: hover) { .log:hover .logtag { display: block; } }
+.log.show, .log:hover { z-index: 4; }
 .morelogs { position: absolute; right: 6px; bottom: 6px; font-size: 12px; color: var(--gold); background: rgba(12,6,24,.8); padding: 1px 6px; border-radius: 999px; }
 .obj.basket { border-style: dashed; }
 /* the closing ritual */
@@ -414,7 +430,7 @@ footer { color: #5a4a78; font-size: 12px; text-align: center; margin-top: 34px; 
   </header>
   <div id="banner"></div>
   <main id="view"></main>
-  <footer>The Cottage: a little Hedgewitch home for everything you know and plan. Synced through your Claude account, so it's the same on your phone and computer, and Munin (Claude) can read and add to it from any chat.</footer>
+  <footer>The Cottage: a little Hedgewitch home for everything you know and plan.</footer>
 </div>
 <div class="fabs">
   <button class="fab" id="muninFab" aria-label="Call Munin" title="Munin"><canvas id="muninFabCv" width="16" height="16"></canvas></button>
@@ -428,8 +444,11 @@ footer { color: #5a4a78; font-size: 12px; text-align: center; margin-top: 34px; 
 "use strict";
 // ============================================================ 01 · data: the rooms, what's saved, and how it syncs
 // Everything lives in two collections, "items" and "projects", plus a few "meta" documents.
-// In claude.ai they sync through the artifact database (same on every device, readable by Claude in any chat).
-// Opened anywhere else, they're kept in this browser only (localStorage).
+// Two ways to run:
+//   server mode  opened from Sophia's own Cottage server: synced through its API, the same on every device,
+//                and readable by Claude in any chat through the Cottage connector. This is the real Cottage.
+//   local mode   opened as a file (for testing): kept in this browser only (localStorage).
+// (The old claude.ai artifact mode was retired in phase 1 of the blueprint, 21 Nov 2026.)
 
 const ROOMS = {
   stargazer: { name: "Observatory", what: "Stargazer", r: [8, 38, 71, 38] },
@@ -459,14 +478,14 @@ const DEFAULT_ROAD = {
   games: [
     { id: "w-g-studio", title: "Studio named: Hedgewitch Games", done: true },
     { id: "w-g-itch", title: "A game on itch.io (Witchbottle)", done: true },
-    { id: "w-g-site", title: "Website live", done: false },
-    { id: "w-g-ads", title: "Ads on the website", done: false },
+    { id: "w-g-site", title: "Website live", done: true },
+    { id: "w-g-ads", title: "Ads on the website", done: true },
     { id: "w-g-dollar", title: "First dollar from games", done: false },
     { id: "w-g-paid", title: "First paid game", done: false },
     { id: "w-g-steam", title: "A game on Steam", done: false },
   ],
   school: [
-    { id: "w-s-path", title: "Choose the path: CS or computer engineering", done: false },
+    { id: "w-s-path", title: "Choose the path: CS or computer engineering", done: true },
     { id: "w-s-papers", title: "Reapplication paperwork done", done: false },
     { id: "w-s-enrolled", title: "Enrolled again", done: false },
     { id: "w-s-intern", title: "An internship", done: false },
@@ -475,8 +494,10 @@ const DEFAULT_ROAD = {
 const HW = 160, HH = 224;                                    // the house picture, in pixels before scaling
 const RW = 160, RH = 84;                                     // the road picture
 
-const S = { items: {}, projects: {}, meta: {}, ready: false, mode: "loading", note: "", open: new Set(), chat: [], readOnly: false, hover: null, pending: false, flash: {}, drawer: {}, table: { running: false, start: 0, mins: 25, left: 0 } };
-let DB = null, SAMPLE = null, DL = null, SERVER = false;   // SERVER: running on Sophia's own Cottage server
+const S = { items: {}, projects: {}, meta: {}, ready: false, mode: "loading", note: "", open: new Set(), chat: [], hover: null, pending: false, flash: {}, drawer: {}, table: { running: false, start: 0, mins: 25, left: 0 } };
+let MUNIN_AI = null, SERVER = false;   // MUNIN_AI: Munin's Hearth brain (null when there isn't one); SERVER: running on Sophia's own Cottage server
+// Which brain is answering, for the badge: the Hearth brain's model name (from the server), or "" when Munin only has plain code.
+const BRAIN = { model: "" };
 const $ = id => document.getElementById(id);
 const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 const newId = p => p + "-" + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
@@ -531,34 +552,21 @@ const PREF = {   // per-device settings (sound), never synced
   get(k, d) { try { const v = localStorage.getItem("cottage_pref_" + k); return v === null ? d : JSON.parse(v); } catch (e) { return d; } },
   set(k, v) { try { localStorage.setItem("cottage_pref_" + k, JSON.stringify(v)); } catch (e) {} },
 };
-const queues = {};
-function enqueue(path, fn) { const p = (queues[path] || Promise.resolve()).then(fn, fn); queues[path] = p.catch(() => {}); return p; }
-function writeError(e) {
-  const code = e && e.code;
-  if (code === "invalid_argument" || code === "permission_denied") { S.readOnly = true; S.note = "The cottage is read-only here, so changes aren't being saved."; }
-  else if (code === "quota_exceeded") S.note = "The cottage is full. Burn some firewood to make room.";
-  else if (code === "revoked") S.note = "This page lost access to your cottage. Reopen it from claude.ai.";
-  else S.note = "A change didn't save. Check your connection and try again.";
-  render();
-}
 function put(col, id, data) {
   const body = { ...data, updated: Date.now() }; delete body.id;
   for (const k of Object.keys(body)) if (body[k] === undefined) delete body[k];
   S[col][id] = { ...body, id }; render();
   if (SERVER) return serverWrite(col, id, body);
-  if (DB) return enqueue(col + "/" + id, () => DB.collection(col).doc(id).set(body).catch(writeError));
   const all = LS.get(col); all[id] = body; LS.set(col, all); return Promise.resolve();
 }
 function del(col, id) {
   delete S[col][id]; render();
   if (SERVER) return serverWrite(col, id, null);
-  if (DB) return enqueue(col + "/" + id, () => DB.collection(col).doc(id).delete().catch(writeError));
   const all = LS.get(col); delete all[id]; LS.set(col, all); return Promise.resolve();
 }
 function putMeta(key, data) {
   S.meta[key] = data; render();
   if (SERVER) return serverWrite("meta", key, data);
-  if (DB) return enqueue("meta/" + key, () => DB.doc("meta/" + key).set(data).catch(writeError));
   const m = LS.get("meta"); m[key] = data; LS.set("meta", m); return Promise.resolve();
 }
 // Small helpers so the rest of the code reads like what it does.
@@ -575,7 +583,7 @@ function hex(col, id, fromEl) { const o = S[col][id]; if (!o) return; toss(fromE
 function unhex(col, id) { const o = S[col][id]; if (!o) return; const d = { ...o }; delete d.wood; put(col, id, d); }
 const woodpile = () => [...Object.values(S.items).filter(i => i.wood).map(i => ({ col: "items", o: i })), ...Object.values(S.projects).filter(p => p.wood).map(p => ({ col: "projects", o: p }))].sort((a, b) => b.o.wood - a.o.wood);
 async function burnOne(col, id) { await del(col, id); S.flash.fire = Date.now(); sfx("burn"); }
-async function burnAll() { const w = woodpile(); for (const { col, o } of w) { await del(col, o.id); if (DB) await new Promise(r => setTimeout(r, 40)); } S.flash.fire = Date.now(); sfx("burn"); return w.length; }
+async function burnAll() { const w = woodpile(); for (const { col, o } of w) await del(col, o.id); S.flash.fire = Date.now(); sfx("burn"); return w.length; }
 // Pages keep their old versions, so a changed plan never loses how we got here.
 function savePage(it, title, body) {
   const hist = Array.isArray(it.history) ? it.history.slice() : [];
@@ -586,35 +594,13 @@ function savePage(it, title, body) {
 // ============================================================ loading
 async function init() {
   drawIcons(); route(); tick();
-  let db = null;
-  if (window.claude && typeof window.claude.use === "function") {
-    window.claude.use("sample").then(s => { SAMPLE = s; render(); }).catch(() => {});
-    window.claude.use("downloads").then(d => { DL = d; }).catch(() => {});
-    try { db = await window.claude.use("db"); } catch (e) { db = null; }
-  }
-  if (db) { DB = db; S.mode = "cloud"; subscribe(); }
-  else if (await serverStart()) { /* running on the Cottage server */ }
+  if (await serverStart()) { /* running on the Cottage server */ }
   else {
     S.mode = "local"; S.items = LS.get("items"); S.projects = LS.get("projects"); S.meta = LS.get("meta"); S.ready = true;
     for (const [id, v] of Object.entries(S.items)) v.id = id; for (const [id, v] of Object.entries(S.projects)) v.id = id;
     render();
   }
 }
-function subscribe() {
-  const got = { items: false, projects: false };
-  const timer = setTimeout(() => { if (!S.ready) { S.note = "Can't reach your cottage yet. It will appear as soon as the connection comes back."; render(); } }, 10000);
-  const onErr = e => { clearTimeout(timer); S.ready = true; S.note = e && e.code === "revoked" ? "This page lost access to your cottage. Reopen it from claude.ai." : "Part of your cottage couldn't load (" + ((e && e.code) || "error") + "). Reopen the page to try again."; render(); };
-  const take = (col, snap) => {
-    const o = {}; for (const d of snap.docs) o[d.id] = { ...d.data(), id: d.id };
-    S[col] = o; got[col] = true;
-    if (got.items && got.projects) { S.ready = true; if (!snap.metadata || !snap.metadata.fromCache) { clearTimeout(timer); if (S.note.startsWith("Can't reach")) S.note = ""; } }
-    render();
-  };
-  DB.collection("items").onSnapshot(s => take("items", s), onErr);
-  DB.collection("projects").onSnapshot(s => take("projects", s), onErr);
-  DB.collection("meta").onSnapshot(s => { const m = {}; for (const d of s.docs) m[d.id] = d.data(); S.meta = m; render(); }, () => {});
-}
-
 // ============================================================ backups
 function backupData() {
   const strip = o => { const d = { ...o }; delete d.id; return d; };
@@ -624,9 +610,8 @@ function backupData() {
 async function backup() {
   const name = "the-cottage-backup-" + dayKey() + ".json", data = JSON.stringify(backupData(), null, 1);
   try {
-    if (DL) { await DL.save({ filename: name, data }); toast("Backup saved"); return; }
     const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob([data], { type: "application/json" })); a.download = name; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 2000); toast("Backup saved");
-  } catch (e) { toast(e && e.code === "declined" ? "Backup cancelled" : "Couldn't save the backup here"); }
+  } catch (e) { toast("Couldn't save the backup here"); }
 }
 async function restore(file, status) {
   let data; try { data = JSON.parse(await file.text()); } catch (e) { status("That file isn't a Cottage backup."); return; }
@@ -642,7 +627,7 @@ async function restore(file, status) {
     if (mops.length) await apiCall("POST", "/api/batch", { ops: mops });
     SV.rev = 0; await serverSync(); status(`Restored ${n} things.`); toast("Backup restored"); return;
   }
-  for (const [col, id, v] of jobs) { if (!v || typeof v !== "object" || !/^[\w.~:@+-]{1,180}$/.test(id)) continue; await put(col, id, v); n++; status(`Restoring ${n} of ${jobs.length}...`); if (DB) await new Promise(r => setTimeout(r, 60)); }
+  for (const [col, id, v] of jobs) { if (!v || typeof v !== "object" || !/^[\w.~:@+-]{1,180}$/.test(id)) continue; await put(col, id, v); n++; status(`Restoring ${n} of ${jobs.length}...`); }
   const meta = data.meta || (data.focus ? { focus: data.focus } : {});
   for (const [k, v] of Object.entries(meta)) if (v && typeof v === "object" && /^[\w-]{1,40}$/.test(k)) await putMeta(k, v);
   status(`Restored ${n} things.`); toast("Backup restored");
@@ -708,7 +693,7 @@ function untie(fromRef, toRef) {
 
 
 // ============================================================ the Cottage server: Sophia's own home for the data
-// When the app is opened from its own server (not inside claude.ai), it talks to the server's API:
+// When the app is opened from its own server, it talks to the server's API:
 // changes are sent right away (and queued if the connection drops), and it checks for changes from other devices every few seconds.
 const SV = { rev: 0, outbox: [], timer: 0, syncing: false };
 async function apiCall(method, path, body) {
@@ -726,6 +711,7 @@ async function serverStart() {
   if (r.status === 401 && kind.includes("json")) { SERVER = true; S.mode = "server"; showSignIn(); return true; }
   if (!r.ok || !kind.includes("json")) return false;
   SERVER = true; S.mode = "server";
+  try { BRAIN.model = (await r.json()).model || ""; } catch (e) { }
   SV.outbox = (LS.get("cottage_outbox") || {}).ops || [];
   const c = LS.get("cottage_cache"); if (c && c.rev) { loadCache(c); S.ready = true; render(); }
   setupServerMunin();
@@ -770,11 +756,11 @@ function flushOutbox() {
   })().finally(() => { flushing = null; });
   return flushing;
 }
-// Munin's brain on the server: Workers AI, behind the same two calls the claude.ai version uses.
+// Munin's Hearth brain: a small free model on the server (Workers AI). Each answer says which model gave it.
 function setupServerMunin() {
-  const chat = async (msgs, opts = {}) => { const r = await apiCall("POST", "/api/ai/chat", { messages: typeof msgs === "string" ? [{ role: "user", content: msgs }] : msgs }); if (opts.onText) opts.onText({ text: r.text }); return { text: r.text }; };
-  chat.json = async prompt => (await apiCall("POST", "/api/ai/json", { prompt })).result;
-  SAMPLE = chat;
+  const chat = async (msgs, opts = {}) => { const r = await apiCall("POST", "/api/ai/chat", { messages: typeof msgs === "string" ? [{ role: "user", content: msgs }] : msgs }); if (r.model) BRAIN.model = r.model; if (opts.onText) opts.onText({ text: r.text }); return { text: r.text, model: r.model || BRAIN.model }; };
+  chat.json = async prompt => { const r = await apiCall("POST", "/api/ai/json", { prompt }); if (r.model) BRAIN.model = r.model; return r.result; };
+  MUNIN_AI = chat;
 }
 function showSignIn(msg) {
   S.mode = "server"; S.ready = false; S.signin = true; document.body.classList.add("signedout");
@@ -1184,12 +1170,12 @@ document.addEventListener("focusout", () => setTimeout(() => { if (S.pending && 
 function draw() {
   const notes = [];
   if (S.signin) return;
-  if (S.mode === "local") notes.push("You're not connected to your Claude account or your Cottage server here, so changes save on this device only.");
+  if (S.mode === "local") notes.push("This is a local copy of The Cottage, not your Cottage server, so changes save on this device only.");
   if (S.note) notes.push(S.note);
   $("banner").innerHTML = notes.map(n => `<div class="banner">${esc(n)}</div>`).join("");
   $("hdrSub").textContent = new Date().toLocaleDateString(undefined, { weekday: "long", month: "long", day: "numeric" });
   document.body.classList.toggle("night", isNight());
-  const ft = document.querySelector("footer"); if (ft) ft.textContent = SERVER ? "The Cottage: a little Hedgewitch home for everything you know and plan. Kept on your own Cottage server behind your passphrase, the same on every device, and Claude can read and add to it through your Cottage connector." : "The Cottage: a little Hedgewitch home for everything you know and plan. Synced through your Claude account, so it's the same on your phone and computer, and Munin (Claude) can read and add to it from any chat.";
+  const ft = document.querySelector("footer"); if (ft) ft.textContent = SERVER ? "The Cottage: a little Hedgewitch home for everything you know and plan. Kept on your own Cottage server behind your passphrase, the same on every device, and Claude can read and add to it through your Cottage connector." : "The Cottage: a little Hedgewitch home for everything you know and plan. This local copy keeps changes on this device only; open your Cottage server to sync them.";
   if (typing()) { S.pending = true; return; }
   if (!S.ready) { $("view").innerHTML = `<div class="empty" style="padding:40px;text-align:center">Lighting the lanterns...</div>`; return; }
   const r = parseRoute(S.route);
@@ -1291,7 +1277,7 @@ function itemHTML(it, o = {}) {
     <div class="ih" data-exp="${esc(it.id)}">${lead}<div class="t">${it.pinned ? '<span class="pin">&#9733;</span> ' : ""}${esc(it.title)}${tags}${o.where ? `<span class="where">${esc(whereText(it))}</span>` : ""}</div>${right ? `<span class="m">${esc(right)}</span>` : ""}</div>
     <div class="ib">${it.body ? `<div class="body">${md(it.body)}</div>` : ""}
       ${it.kind === "question" ? (it.answer ? `<div class="body"><b>Your answer:</b> ${esc(it.answer)}</div>` : `<form class="answer" data-answer="${esc(it.id)}"><input type="text" placeholder="Your answer..."><button type="submit">Answer</button></form>`) : ""}
-      <div class="ibm">${it.created ? "Added " + fmtDate(it.created) + (it.by === "Claude" ? ", brought by Munin from a chat" : it.by ? " by " + esc(it.by) : "") : ""} &middot; ${esc(whereText(it))}</div>
+      <div class="ibm">${it.created ? "Added " + fmtDate(it.created) + (it.by === "Claude" ? ", written by Claude in a chat" : it.by ? " by " + esc(it.by) : "") : ""} &middot; ${esc(whereText(it))}</div>
       <div class="acts">${it.link ? `<a class="play" href="${esc(safeUrl(it.link))}" target="_blank" rel="noopener">Open link</a>` : ""}
         ${it.kind === "todo" && !it.done ? `<button data-pick="${esc(it.id)}:today">${pk === "today" ? "Not today" : "Do today"}</button><button data-pick="${esc(it.id)}:week">${pk === "week" ? "Not this week" : "This week"}</button>` : ""}
         ${it.kind === "question" && !it.done ? `<button data-toggle="${esc(it.id)}">Settled</button>` : ""}
@@ -1448,7 +1434,7 @@ function vDoc(id) {
     <div class="grim"><div class="gh"><h2>${esc(shown ? shown.title : d.title)}</h2>${isNew(d) ? `<span class="tag new">new from Munin</span>` : ""}</div>
       ${shown ? `<div class="banner">You're reading an older version from ${fmtDate(shown.at)}. <button class="ghost" data-docver="-1">Back to the current page</button> <button data-restorever="${v}">Bring this version back</button></div>` : ""}
       <div class="doc">${mdDoc(shown ? shown.body : d.body)}</div>
-      <div class="ibm" style="margin-top:18px">${d.created ? "Written " + fmtDate(d.created) + (d.by === "Claude" ? " (brought by Munin from a chat)" : "") : ""}${d.updated ? " · updated " + fmtDate(d.updated) : ""}${d.link ? ` · <a href="${esc(safeUrl(d.link))}" target="_blank" rel="noopener" style="color:var(--lilac)">source</a>` : ""}</div>
+      <div class="ibm" style="margin-top:18px">${d.created ? "Written " + fmtDate(d.created) + (d.by === "Claude" ? " by Claude in a chat" : "") : ""}${d.updated ? " · updated " + fmtDate(d.updated) : ""}${d.link ? ` · <a href="${esc(safeUrl(d.link))}" target="_blank" rel="noopener" style="color:var(--lilac)">source</a>` : ""}</div>
       <div class="btns" style="margin-top:8px"><button class="main" data-editdoc="${esc(id)}">Edit page</button><button data-edit="${esc(id)}">Move or rename</button><button data-pin="${esc(id)}">${d.pinned ? "Unpin" : "Pin"}</button>${(d.history || []).length ? `<button data-dochist="${esc(id)}">${d.history.length} older ${d.history.length === 1 ? "version" : "versions"}</button>` : ""}<span class="spacer"></span><button class="ember" data-hex="items:${esc(id)}">Hex into firewood</button></div></div></div>`;
   S.built = "doc:" + id;
   if (isNew(d)) setTimeout(() => { const x = S.items[id]; if (x && isNew(x)) saveItem(x, { seen: true }); }, 1500);
@@ -1487,14 +1473,14 @@ function vBook() {
     $("runeSave").onclick = () => { const ids = inscribe($("runeIn").value); if (ids.length) { $("runeIn").value = ""; $("runeIn").blur(); S.built = "book"; renderRunes(); autoFile(ids); } };
     $("runeIn").onkeydown = e => { if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) $("runeSave").click(); };
   }
-  $("bookTips").innerHTML = SAMPLE ? (PREF.get("autofile", true) ? "Munin reads each rune as you write it. If he's sure where it belongs, he carries it there; the rest wait here with his suggestion." : "Munin reads each rune and suggests where it belongs. You can always change his mind before sending.") : S.mode === "local" ? "Munin's sorting works when The Cottage is opened from claude.ai. You can still file runes by hand." : "";
+  $("bookTips").innerHTML = MUNIN_AI ? (PREF.get("autofile", true) ? "Munin reads each rune as you write it. If he's sure where it belongs, he carries it there; the rest wait here with his suggestion." : "Munin reads each rune and suggests where it belongs. You can always change his mind before sending.") : S.mode === "local" ? "Munin's sorting works when The Cottage is opened from your Cottage server. You can still file runes by hand." : "";
   renderRunes(runes);
 }
 function renderRunes(runes = items().filter(isRune).sort(byOld)) {
   const leaf = $("runeLeaf"); if (!leaf) return;
   const sug = runes.filter(r => r.suggest);
   leaf.innerHTML = `<h3>Waiting runes <span class="sub" style="font-family:system-ui;font-size:14px">${runes.length || ""}</span></h3>
-    <div class="btns">${runes.length && SAMPLE ? `<button class="main" id="sortAll">Munin, sort these</button>` : ""}${sug.length ? `<button id="sendAll">Send ${sug.length === runes.length ? "them all" : sug.length + " sorted"}</button>` : ""}</div>
+    <div class="btns">${runes.length && MUNIN_AI ? `<button class="main" id="sortAll">Munin, sort these</button>` : ""}${sug.length ? `<button id="sendAll">Send ${sug.length === runes.length ? "them all" : sug.length + " sorted"}</button>` : ""}</div>
     <div>${runes.length ? runes.map(runeHTML).join("") : `<div class="empty" style="padding:20px 4px">No runes waiting. Every thought has a home.</div>`}</div>`;
   if ($("sortAll")) $("sortAll").onclick = sortBook;
   if ($("sendAll")) $("sendAll").onclick = () => { const list = items().filter(i => isRune(i) && i.suggest); list.forEach((l, n) => setTimeout(() => sendRune(l, l.suggest.area, l.suggest.project, l.suggest.kind, n === list.length - 1), n * 120)); };
@@ -1502,8 +1488,8 @@ function renderRunes(runes = items().filter(isRune).sort(byOld)) {
 function runeHTML(l) {
   const sg = l.suggest, area = sg ? sg.area : guessArea(l.title + " " + (l.body || "")), kind = sg ? sg.kind : l.kind;
   return `<div class="rune" data-rune="${esc(l.id)}"><div style="display:flex;gap:10px">${img(kind === "doc" ? "doc" : kind)}<div style="flex:1;min-width:0"><div class="t">${esc(l.title)}</div>${l.body ? `<div class="body sub">${esc(snip(l.body, 220))}</div>` : ""}
-    ${l.by === "Claude" ? `<div class="from">${img("feather")} Brought by Munin from a chat</div>` : ""}
-    ${sg ? `<div class="sug">Munin says: ${aOrAn((KINDS[sg.kind] || "note").toLowerCase())} for the ${esc((ROOMS[sg.area] || {}).name || "")}${sg.project && live(S.projects[sg.project]) ? " › " + esc(S.projects[sg.project].name) : ""}</div>` : ""}
+    ${l.by === "Claude" ? `<div class="from">${brainBadge("claude")} wrote this in a chat; Munin carried it home</div>` : ""}
+    ${sg ? `<div class="sug">${l.by === "Claude" ? "Suggested home: " : brainBadge("hearth") + " suggests: "}${aOrAn((KINDS[sg.kind] || "note").toLowerCase())} for the ${esc((ROOMS[sg.area] || {}).name || "")}${sg.project && live(S.projects[sg.project]) ? " › " + esc(S.projects[sg.project].name) : ""}</div>` : ""}
     <div class="file"><select data-fk aria-label="Kind">${Object.entries(KINDS).filter(([k]) => k !== "log").map(([k, n]) => `<option value="${k}" ${k === kind ? "selected" : ""}>${n}</option>`).join("")}</select><select data-fr aria-label="Room">${roomSelect(ROOMS[area] && area !== "book" ? area : "life")}</select><select data-fp aria-label="Project">${projSelect(ROOMS[area] && area !== "book" ? area : "life", sg ? sg.project : "")}</select>
       <button class="main" data-send="${esc(l.id)}">Send</button><button data-edit="${esc(l.id)}">Edit</button><button class="ember" data-hex="items:${esc(l.id)}" title="Hex into firewood">Hex</button></div></div></div></div>`;
 }
@@ -1578,7 +1564,7 @@ function openAdd(preset) {
   const hereName = here ? (ctx.project && S.projects[ctx.project] ? S.projects[ctx.project].name : "the " + ROOMS[ctx.area].name) : "";
   openSheet("add", `<h3>${img("quill")} Write a rune</h3>
     <textarea id="aText" rows="5" placeholder="Anything: a to-do, an idea, a question, a link, a whole plan..."></textarea>
-    <div class="chips" id="aDest">${here ? `<button class="chip on" data-dest="here">Put it in ${esc(hereName)}</button>` : ""}<button class="chip ${here ? "" : "on"}" data-dest="book">${SAMPLE && PREF.get("autofile", true) ? "Give it to Munin" : "Into the Book of Shadows"}</button></div>
+    <div class="chips" id="aDest">${here ? `<button class="chip on" data-dest="here">Put it in ${esc(hereName)}</button>` : ""}<button class="chip ${here ? "" : "on"}" data-dest="book">${MUNIN_AI && PREF.get("autofile", true) ? "Give it to Munin" : "Into the Book of Shadows"}</button></div>
     <div id="aHere" ${here ? "" : "hidden"}><div class="chips" id="aKinds">${["auto", "todo", "note", "idea", "question", "decision", "link", "doc"].map(k => `<button class="chip ${k === "auto" ? "on" : ""}" data-ak="${k}">${k === "auto" ? "Figure it out" : KINDS[k]}</button>`).join("")}</div></div>
     <div class="sub" id="aHint">${here ? "" : bookHint()}</div>
     <div class="btns"><span class="spacer"></span><span class="sub" id="aStatus"></span><button class="main" id="aSave">${here ? "Write it down" : "Inscribe"}</button></div>`);
@@ -1594,7 +1580,7 @@ function openAdd(preset) {
   $("aText").onkeydown = e => { if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) $("aSave").click(); };
   setTimeout(() => $("aText").focus(), 50);
 }
-const bookHint = () => SAMPLE && PREF.get("autofile", true) ? "Munin reads it right away and carries it to the right room. If he isn't sure, it waits in the Book of Shadows." : "It waits in the Book of Shadows until you, or Munin, send it to a room.";
+const bookHint = () => MUNIN_AI && PREF.get("autofile", true) ? "Munin reads it right away and carries it to the right room. If he isn't sure, it waits in the Book of Shadows." : "It waits in the Book of Shadows until you, or Munin, send it to a room.";
 function splitTitle(text) { const lines = text.split("\n"); let title = lines[0].replace(/^#+\s*/, "").trim(), body = lines.slice(1).join("\n").trim(); if (title.length > 140) { body = text; title = title.slice(0, 80).replace(/\s+\S*$/, "") + "..."; } return { title, body }; }
 function guessKind(text) {
   const { title } = splitTitle(text), link = (text.match(/https?:\/\/\S+/) || [""])[0];
@@ -1602,8 +1588,7 @@ function guessKind(text) {
   return /^(todo|to do|to-do|remember to|need to|i need to|i should)\b/i.test(text) ? "todo" : /\?\s*$/.test(title) ? "question" : link && text.replace(link, "").trim().length < 20 ? "link" : "note";
 }
 function addHere(text, kind, area, project) {
-  if (S.readOnly) { toast("Read-only here"); return; }
-  if (kind === "auto") kind = guessKind(text);
+    if (kind === "auto") kind = guessKind(text);
   const { title, body } = splitTitle(text), link = (text.match(/https?:\/\/\S+/) || [""])[0];
   const id = newId(kind.slice(0, 1));
   put("items", id, { kind, title: title.slice(0, 200), body, area, project: project || "", link, done: false, pinned: false, created: Date.now(), by: "Sophia" });
@@ -1633,7 +1618,7 @@ function openEdit(id) {
     <label>Link<input type="url" id="eLink" value="${esc(it.link || "")}" placeholder="https://..."></label>
     ${it.kind === "log" ? `<label>Date<input type="text" id="eDate" value="${esc(it.date || "")}" placeholder="${dayKey()}"></label>` : ""}
     <div class="checks">${it.kind === "todo" || it.kind === "question" ? `<label><input type="checkbox" id="eDone" ${it.done ? "checked" : ""}> Done</label>` : ""}<label><input type="checkbox" id="ePin" ${it.pinned ? "checked" : ""}> Pinned</label></div>
-    <div class="sub">${it.created ? "Added " + fmtDate(it.created) + (it.by === "Claude" ? ", brought by Munin from a chat" : it.by ? " by " + esc(it.by) : "") : ""}</div>
+    <div class="sub">${it.created ? "Added " + fmtDate(it.created) + (it.by === "Claude" ? ", written by Claude in a chat" : it.by ? " by " + esc(it.by) : "") : ""}</div>
     <div class="btns"><button class="main" id="eSave">Save</button><button id="eCancel">Cancel</button><span class="spacer"></span><button class="ember" id="eHex">Hex into firewood</button></div>`);
   const fill = v => { const a = $("eRoom").value; $("eProj").innerHTML = a === "book" ? `<option value="">No project</option>` : projSelect(a, v); $("eProj").disabled = a === "book"; };
   fill(it.project); $("eRoom").onchange = () => fill("");
@@ -1690,8 +1675,8 @@ function openDocEdit(id, ctx) {
 function openDocHistory(id) {
   const d = S.items[id]; if (!d) return; const h = d.history || [];
   openSheet("hist", `<h3>${img("doc")} Older versions</h3><div class="sub">Every time this page changes, the old version is kept here.</div>
-    <div class="res sel" data-docver="-1"><img src="${icon("doc")}" alt=""><div><div class="t">${esc(d.title)}</div><div class="w">Current version · ${fmtDate(d.updated)}${d.by ? " · " + (d.by === "Claude" ? "by Munin" : esc(d.by)) : ""}</div></div></div>
-    ${h.map((v, n) => `<div class="res" data-docver="${n}"><img src="${icon("doc")}" alt=""><div><div class="t">${esc(v.title)}</div><div class="w">${fmtDate(v.at)} ${new Date(v.at).toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" })}${v.by ? " · " + (v.by === "Claude" ? "by Munin" : esc(v.by)) : ""} · ${esc(snip(v.body, 60))}</div></div></div>`).join("")}
+    <div class="res sel" data-docver="-1"><img src="${icon("doc")}" alt=""><div><div class="t">${esc(d.title)}</div><div class="w">Current version · ${fmtDate(d.updated)}${d.by ? " · " + (d.by === "Claude" ? "by Claude" : esc(d.by)) : ""}</div></div></div>
+    ${h.map((v, n) => `<div class="res" data-docver="${n}"><img src="${icon("doc")}" alt=""><div><div class="t">${esc(v.title)}</div><div class="w">${fmtDate(v.at)} ${new Date(v.at).toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" })}${v.by ? " · " + (v.by === "Claude" ? "by Claude" : esc(v.by)) : ""} · ${esc(snip(v.body, 60))}</div></div></div>`).join("")}
     <div class="btns"><button id="hClose">Close</button></div>`);
   $("hClose").onclick = closeSheet;
 }
@@ -1791,8 +1776,8 @@ function openMenu() {
       <div class="btns" style="margin-top:8px"><button class="main" id="bkSave">Download backup</button></div></div>
     <div class="card"><div class="lbl">Restore from a backup</div><div class="sub">Brings back everything in a backup file (old My Brain backups work too). Things already here stay; ones with the same id are replaced by the backup's version.</div>
       <div class="btns" style="margin-top:8px"><input type="file" id="bkFile" accept=".json,application/json"><span class="sub" id="bkStatus"></span></div></div>
-    <div class="card"><div class="lbl">Open it like an app</div><div class="sub">${SERVER ? "On your phone, open this page in your browser and use \"Add to Home Screen\" (Safari: Share, then Add to Home Screen). On your computer, use the install icon in the address bar, or the browser menu's \"Install The Cottage\". It opens in its own window, and everything stays in sync." : "On your phone, open this page in the Claude app or your browser and use \"Add to Home Screen\". On your computer, it's pinned in your Claude sidebar. Everything stays in sync either way."}</div></div>
-    <div class="card"><div class="lbl">How it's kept</div><div class="sub">${S.mode === "server" ? "Kept on your own Cottage server (Cloudflare), behind your passphrase. The same on every device, and Claude can read and add to it through your Cottage connector." : S.mode === "cloud" ? "Synced through your Claude account. It's private to you, the same on every device, and Munin (Claude) can read and add to it from your chats." : "Saved on this device only."} ${items().length} things in ${projects().length} projects, ${items().filter(i => i.kind === "doc").length} pages, ${woodpile().length} on the woodpile.</div></div>
+    <div class="card"><div class="lbl">Open it like an app</div><div class="sub">${SERVER ? "On your phone, open this page in your browser and use \"Add to Home Screen\" (Safari: Share, then Add to Home Screen). On your computer, use the install icon in the address bar, or the browser menu's \"Install The Cottage\". It opens in its own window, and everything stays in sync." : "Open your Cottage server's address to install it as an app on your phone or computer. This local copy is only for testing."}</div></div>
+    <div class="card"><div class="lbl">How it's kept</div><div class="sub">${S.mode === "server" ? "Kept on your own Cottage server (Cloudflare), behind your passphrase. The same on every device, and Claude can read and add to it through your Cottage connector." : "Saved on this device only (a local copy for testing)."} ${items().length} things in ${projects().length} projects, ${items().filter(i => i.kind === "doc").length} pages, ${woodpile().length} on the woodpile.</div></div>
     <div class="btns">${SERVER ? `<button class="ghost" id="mOut">Lock the door (sign out)</button>` : ""}<span class="spacer"></span><button id="mClose">Close</button></div>`);
   $("mClose").onclick = closeSheet; if ($("mOut")) $("mOut").onclick = signOut;
   $("sndBtn").onclick = () => { const on = !PREF.get("sound", false); PREF.set("sound", on); if (on) { audioOn(); sfx("rune"); } $("sndBtn").textContent = on ? "Sound is on" : "Sound is off"; $("sndBtn").classList.toggle("main", on); };
@@ -1815,7 +1800,7 @@ function openThread(pid) {
       <div class="addline" style="margin-top:0"><input type="text" id="thNew" placeholder="A new step for ${esc(p.name)}..."><button id="thNewBtn">Add</button></div>
       <label style="margin-top:8px">Or a step from anywhere<select id="thTodo"><option value="">Choose a to-do...</option>${todos.map(i => `<option value="i:${esc(i.id)}">${esc(snip(i.title, 70))} · ${esc(whereText(i))}</option>`).join("")}</select></label>
       <label style="margin-top:8px">Or a waystone<select id="thStone"><option value="">Choose a waystone...</option>${stones.map(([r, t]) => `<option value="${esc(r)}">${esc(t)}</option>`).join("")}</select></label></div>
-    <div class="btns">${SAMPLE ? `<button id="thWeave">Munin, weave it</button>` : ""}<span class="sub" id="thStatus"></span><span class="spacer"></span><button class="ghost" id="thAuto">Back to automatic</button></div>
+    <div class="btns">${MUNIN_AI ? `<button id="thWeave">Munin, weave it</button>` : ""}<span class="sub" id="thStatus"></span><span class="spacer"></span><button class="ghost" id="thAuto">Back to automatic</button></div>
     <div class="btns"><button class="main" id="thSave">Save the thread</button><button id="thCancel">Cancel</button></div>`);
   const paint = () => { $("thRows").innerHTML = refs.length ? refs.map((r, n) => { const l = label(r); return l ? `<div class="stonerow"><span class="sub" style="width:18px">${n + 1}</span><span style="flex:1;min-width:0">${l}</span><button data-tu="${n}" ${n ? "" : "disabled"} aria-label="Move up">↑</button><button data-td="${n}" ${n < refs.length - 1 ? "" : "disabled"} aria-label="Move down">↓</button><button class="ember" data-tx="${n}" aria-label="Remove">×</button></div>` : ""; }).join("") : `<div class="empty">No steps yet.</div>`; };
   paint();
@@ -1829,7 +1814,7 @@ function openThread(pid) {
   $("thSave").onclick = () => { put("projects", pid, { ...p, thread: refs }); closeSheet(); toast("Thread saved"); };
   $("thCancel").onclick = closeSheet;
   if ($("thWeave")) $("thWeave").onclick = async () => { $("thStatus").textContent = "Munin is weaving..."; $("thWeave").disabled = true;
-    try { const out = await weave(p); if (out && out.length) { refs = out; paint(); $("thStatus").textContent = "Here's Munin's thread. Save it if it looks right."; } else $("thStatus").textContent = "Munin couldn't find a thread this time."; }
+    try { const out = await weave(p); if (out && out.length) { refs = out; paint(); $("thStatus").innerHTML = brainBadge("hearth") + " wove this thread. Save it if it looks right."; } else $("thStatus").textContent = "Munin couldn't find a thread this time."; }
     catch (e) { $("thStatus").textContent = "Munin couldn't weave it this time."; } $("thWeave").disabled = false; };
 }
 
@@ -1852,14 +1837,31 @@ function openTie(fromRef) {
 function openSatchel(which) {
   const all = items();
   if (which === "new") { const f = all.filter(i => isNew(i) && !isRune(i)).sort(byNew);
-    openSheet("satchel", `<h3>${img("feather")} New from Munin</h3><div class="sub">Brought in from your chats with Claude. Opening one marks it read.</div>${list(f, "All caught up.", { where: true })}<div class="btns"><button data-seenall>Mark all read</button><button id="sClose">Close</button></div>`); }
+    openSheet("satchel", `<h3>${img("feather")} New from Munin</h3><div class="sub">Written by Claude in your chats; Munin carried them home. Opening one marks it read.</div>${list(f, "All caught up.", { where: true })}<div class="btns"><button data-seenall>Mark all read</button><button id="sClose">Close</button></div>`); }
   else { const q = all.filter(openQ).sort(byOld);
     openSheet("satchel", `<h3>${img("question")} Waiting on you</h3><div class="sub">Questions only you can answer. Answered ones move to Decided.</div>${list(q, "Nothing waiting.", { where: true })}<div class="btns"><button id="sClose">Close</button></div>`); }
   $("sClose").onclick = closeSheet;
 }
 
 // ============================================================ 05 · Munin: the cottage's raven. He sorts runes, carries them to rooms, answers questions, and keeps you company.
-// In Norse myth Munin means "memory". Here he is Claude, living in the cottage.
+// In Norse myth Munin means "memory". He is the keeper (his Hearth brain is a small free model on the server, plus plain code)
+// and the messenger between the cottage and Claude, who does the deep thinking in chats through the Cottage connector.
+
+// ---- the brain badge: wherever Munin answers, it shows which brain is talking
+//   Hearth brain  the small free model on the Cottage server (uses none of Sophia's Claude usage)
+//   Claude        the thinker, in a chat through the Cottage connector; Munin carries what it writes home
+//   Plain code    no AI at all: Munin's own rules
+const MODEL_NAMES = [[/llama-4-scout/i, "Llama 4 Scout"], [/mistral-small/i, "Mistral Small"], [/llama-3\.1-8b/i, "Llama 3.1 8B"]];
+function modelName(m) { m = String(m || ""); const hit = MODEL_NAMES.find(([re]) => re.test(m)); return hit ? hit[1] : m.replace(/^@cf\/[^/]+\//, ""); }
+const brainNow = () => MUNIN_AI ? "hearth" : "code";
+function brainBadge(who, model) {
+  if (who === "claude") return `<span class="brain claude" title="Written by Claude in a chat, through your Cottage connector. Munin carried it home.">${img("feather")} Claude</span>`;
+  if (who === "hearth") { const n = modelName(model || BRAIN.model); return `<span class="brain hearth" title="Munin's Hearth brain: ${n ? esc(n) + ", " : ""}a small free model on your Cottage server. It uses none of your Claude usage.">Hearth brain${n ? " · " + esc(n) : ""}</span>`; }
+  return `<span class="brain code" title="No AI here: Munin's own rules, written in code.">Plain code</span>`;
+}
+function brainRow() {
+  return `<div class="brainrow"><span>Answering here:</span>${brainBadge(brainNow())}<span>Deep thinking:</span>${brainBadge("claude")}<span>in your chats</span></div>`;
+}
 
 // ---- what Munin says on the home screen: the most useful thing first
 function muninLine() {
@@ -1893,7 +1895,7 @@ function doSay(act) {
 const ASK_CHIPS = ["What should I focus on today?", "What's waiting on me?", "Where does each game stand?", "What's my plan for money right now?", "What did we get done lately?"];
 function openMunin() {
   const runes = items().filter(isRune).length, say = muninLine();
-  openSheet("munin", `<div class="mhead"><canvas id="muninBig" width="16" height="16"></canvas><div><h3>Munin</h3><div class="say">${esc(say.text)}</div></div></div>
+  openSheet("munin", `<div class="mhead"><canvas id="muninBig" width="16" height="16"></canvas><div><h3>Munin</h3><div class="say">${esc(say.text)}</div>${brainRow()}</div></div>
     <div class="mgrid">
       <button data-m="rune"><b>Write a rune</b><span>Anything on your mind</span></button>
       <button data-m="book"><b>Sort the book</b><span>${runes ? runes + " waiting" : "Nothing waiting"}</span></button>
@@ -1907,7 +1909,7 @@ function openMunin() {
     <div class="chips">${ASK_CHIPS.map(q => `<button class="chip" data-ask="${esc(q)}">${esc(q)}</button>`).join("")}</div>
     <div id="askLog"></div>
     <form id="askForm" style="display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap"><textarea id="askIn" rows="2" placeholder="Ask about your projects, plans or notes..." style="flex:1 1 240px"></textarea><div class="btns"><button class="main" type="submit">Ask</button><button type="button" id="askWrite" title="Save what you typed as a rune instead">Write it down</button></div></form>
-    <div class="sub" id="askNote">${SAMPLE ? "I answer only from what's written in the cottage." : S.mode === "local" ? "Asking works when The Cottage is opened from claude.ai." : "Asking isn't available in this view."}</div>`);
+    <div class="sub" id="askNote">${MUNIN_AI ? "I answer only from what's written in the cottage." : S.mode === "local" ? "Asking works when The Cottage is opened from your Cottage server." : "Asking isn't available right now."}</div>`);
   S.flash.munin = Date.now(); sfx("caw");
   drawChat();
   $("sheet").querySelector(".mgrid").onclick = e => { const b = e.target.closest("[data-m]"); if (!b) return; const m = b.dataset.m; closeSheet();
@@ -1932,10 +1934,10 @@ function answerHTML(text) {
     const it = S.items[id]; return it ? `<span class="ref" data-ref="i:${esc(id)}">${esc(snip(it.title, 48))}</span>` : "";
   });
 }
-function drawChat() { const L = $("askLog"); if (!L) return; L.innerHTML = S.chat.map(m => m.role === "user" ? `<div class="q">${esc(m.content)}</div>` : `<div class="a">${m.content ? answerHTML(m.content) : '<span class="sub">Munin is thinking...</span>'}</div>`).join(""); const last = L.lastElementChild; if (last) last.scrollIntoView({ block: "nearest" }); }
+function drawChat() { const L = $("askLog"); if (!L) return; L.innerHTML = S.chat.map(m => m.role === "user" ? `<div class="q">${esc(m.content)}</div>` : `<div class="a">${brainBadge("hearth", m.model)}${m.content ? answerHTML(m.content) : '<span class="sub">Munin is thinking...</span>'}</div>`).join(""); const last = L.lastElementChild; if (last) last.scrollIntoView({ block: "nearest" }); }
 let asking = false;
 async function ask(q) {
-  q = (q || "").trim(); if (!q || asking || !SAMPLE) return;
+  q = (q || "").trim(); if (!q || asking || !MUNIN_AI) return;
   asking = true; $("askIn").value = ""; S.flash.munin = Date.now();
   S.chat.push({ role: "user", content: q }); const ans = { role: "assistant", content: "" }; S.chat.push(ans); drawChat();
   const intro = `You are Munin, the raven who keeps Sophia's cottage. The cottage is her personal organizer: she's a Computer Science student and indie game developer (studio: Hedgewitch Games) working toward income now (a job that isn't retail, or money from her games), getting back into school, and a game-dev career.
@@ -1947,14 +1949,14 @@ When you mention a specific note, page or project, add its reference right after
 ${brainText()}`;
   const hist = S.chat.slice(0, -1).slice(-7); while (hist.length && hist[0].role !== "user") hist.shift();
   const msgs = hist.map((m, i) => ({ role: m.role, content: i === 0 ? intro + "\n\nQUESTION: " + m.content : m.content }));
-  try { const r = await SAMPLE(msgs, { cache: false, onText: ({ text }) => { ans.content = text; drawChat(); } }); ans.content = r.text || ans.content; }
-  catch (e) { ans.content = (e && e.text) || (e && e.code === "not_granted" ? "I need your OK to think. Try again and allow it when asked." : e && e.code === "rate_limited" ? "My feathers need a moment. Try again in a minute." : "Something went wrong while I was thinking. Try again."); }
+  try { const r = await MUNIN_AI(msgs, { cache: false, onText: ({ text }) => { ans.content = text; drawChat(); } }); ans.content = r.text || ans.content; ans.model = r.model; }
+  catch (e) { ans.content = (e && e.text) || (e && e.code === "rate_limited" ? "My feathers need a moment. Try again in a minute." : "Something went wrong while I was thinking. Try again."); }
   asking = false; drawChat();
 }
 
 // ---- runes: write them into the book, sort them, send them
 function inscribe(text, single) {   // returns the ids of the new runes
-  text = String(text || "").trim(); if (!text) return []; if (S.readOnly) { toast("Read-only here"); return []; }
+  text = String(text || "").trim(); if (!text) return [];
   let chunks;
   if (single) chunks = [text];
   else {
@@ -1976,7 +1978,7 @@ function inscribe(text, single) {   // returns the ids of the new runes
 }
 // Munin reads new runes right away. The ones he's sure about, he carries to their rooms; the rest wait in the book with his suggestion.
 function autoFile(ids) {
-  if (!SAMPLE || !PREF.get("autofile", true) || !ids || !ids.length) return false;
+  if (!MUNIN_AI || !PREF.get("autofile", true) || !ids || !ids.length) return false;
   const runes = ids.map(id => S.items[id]).filter(Boolean);
   S.flash.munin = Date.now();
   classify(runes.map(l => l.title + (l.body ? "\n" + l.body : ""))).then(out => {
@@ -1995,13 +1997,13 @@ Areas: games = Hedgewitch Games (her small witchy browser games, the website, it
 Projects: ${projects().map(p => p.id + " = " + p.name + " (" + p.area + ")").join("; ")}.
 "todo" = something to do; "question" = something to decide or answer later; "decision" = something already decided; "idea" = a possible future thing; "link" = mainly a URL; "doc" = a long plan or document with several parts; otherwise "note". Pick a project only when the note is clearly about it.
 Notes: ${JSON.stringify(texts.map(t => t.slice(0, 1500)))}`;
-  const v = typeof SAMPLE.json === "function" ? await SAMPLE.json(prompt, { modelTier: "quick" }) : JSON.parse((await SAMPLE(prompt, { modelTier: "quick" })).text);
+  const v = await MUNIN_AI.json(prompt);
   const arr = Array.isArray(v) ? v : (v && Array.isArray(v.notes) ? v.notes : [v]);
   return arr.map(x => x && typeof x === "object" ? { kind: KINDS[x.kind] && x.kind !== "log" ? x.kind : "note", area: ROOMS[x.area] && x.area !== "book" ? x.area : "life", project: live(S.projects[x.project]) ? x.project : "", title: String(x.title || "").slice(0, 120), sure: x.sure === true } : null);
 }
 async function sortBook() {
   const runes = items().filter(isRune).sort(byOld);
-  if (!SAMPLE || !runes.length) return;
+  if (!MUNIN_AI || !runes.length) return;
   const b = $("sortAll"); if (b) { b.textContent = "Munin is reading..."; b.disabled = true; }
   S.flash.munin = Date.now();
   try {
@@ -2053,7 +2055,7 @@ Project: ${p.name}. Status: ${p.status || "?"}. Next: ${p.next || "?"}. About: $
 To-dos you may use (ref = title, project): ${cands.map(i => "i:" + i.id + " = " + i.title + ", " + (projOf(i) ? projOf(i).name : "")).join("; ")}
 Waystones: ${stones.map(s => s.ref + " = " + s.t).join("; ")}
 Prefer this project's own to-dos, add another project's to-do only when this project truly needs it, and end with the nearest unreached waystone it helps reach.`;
-  const v = typeof SAMPLE.json === "function" ? await SAMPLE.json(prompt, { modelTier: "quick" }) : JSON.parse((await SAMPLE(prompt, { modelTier: "quick" })).text);
+  const v = await MUNIN_AI.json(prompt);
   const arr = Array.isArray(v) ? v : v && Array.isArray(v.steps) ? v.steps : [];
   return arr.map(x => typeof x === "string" ? (resolve(x) ? x : null) : x && x.t ? { t: String(x.t).slice(0, 140), d: false } : null).filter(Boolean).slice(0, 10);
 }
@@ -2291,9 +2293,11 @@ function logURL() {
   return LOG_URL = c.toDataURL();
 }
 // The logs by the hearth, placed in room pixels as percentages so they scale with any size of fireplace.
+// Each log carries a name tag (what it was, when it was hexed): tap a log to read it, and it rides along while you drag.
+function logName(col, o) { return { name: o.title || o.name || "Something old", what: (col === "projects" ? "Project" : KINDS[o.kind] || "Note") + (o.wood ? " · hexed " + fmtDate(o.wood) : "") }; }
 function logsHTML(wood) {
-  return wood.slice(0, 9).map(({ col, o }, n) => { const lx = 31 + (n % 3) * 4 + (Math.floor(n / 3) % 2 ? 2 : 0), ly = 42 - 8 - Math.floor(n / 3) * 3;
-    return `<button class="log" data-log="${col}:${esc(o.id)}" style="left:${(lx / 71 * 100).toFixed(2)}%;top:${(ly / 42 * 100).toFixed(2)}%" title="${esc(o.title || o.name)}" aria-label="Log: ${esc(o.title || o.name)}. Drag into the fire to burn it"><img src="${logURL()}" alt=""></button>`; }).join("")
+  return wood.slice(0, 9).map(({ col, o }, n) => { const lx = 31 + (n % 3) * 4 + (Math.floor(n / 3) % 2 ? 2 : 0), ly = 42 - 8 - Math.floor(n / 3) * 3, L = logName(col, o);
+    return `<button class="log" data-log="${col}:${esc(o.id)}" style="left:${(lx / 71 * 100).toFixed(2)}%;top:${(ly / 42 * 100).toFixed(2)}%" aria-label="Log: ${esc(L.name)}, ${esc(L.what)}. Drag into the fire to burn it"><img src="${logURL()}" alt=""><span class="logtag" aria-hidden="true"><b>${esc(snip(L.name, 48))}</b><small>${esc(L.what)}</small></span></button>`; }).join("")
     + (wood.length > 9 ? `<span class="morelogs">+${wood.length - 9}</span>` : "");
 }
 function fireplaceHTML(wood, id) {
@@ -2309,6 +2313,7 @@ function wireFireplace(id, onBurn) {
     el.onpointerdown = e => {
       e.preventDefault(); el.setPointerCapture(e.pointerId);
       const start = { x: e.clientX, y: e.clientY }; let moved = false;
+      box.querySelectorAll(".log.show").forEach(x => { if (x !== el) x.classList.remove("show"); });
       el.classList.add("dragging");
       el.onpointermove = ev => { const dx = ev.clientX - start.x, dy = ev.clientY - start.y; if (Math.abs(dx) + Math.abs(dy) > 4) moved = true; el.style.transform = `translate(${dx}px, ${dy}px) rotate(${dx / 12}deg)`; };
       el.onpointerup = el.onpointercancel = async ev => {
@@ -2320,7 +2325,7 @@ function wireFireplace(id, onBurn) {
           setTimeout(async () => { await burnOne(col, oid); toast(`"${snip(o ? o.title || o.name : "", 40)}" went up in sparks`); if (onBurn) onBurn(); }, 380);
         } else {
           el.style.transition = "transform .3s ease"; el.style.transform = ""; setTimeout(() => { el.style.transition = ""; }, 320);
-          if (!moved) toast("Drag this log into the fire to burn it for good");
+          if (!moved) { el.classList.toggle("show"); clearTimeout(el.tagT); if (el.classList.contains("show")) { sfx("rune"); el.tagT = setTimeout(() => el.classList.remove("show"), 4000); } }
         }
       };
     };

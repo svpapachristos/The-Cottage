@@ -8,7 +8,7 @@ import { OAuthProvider, AuthorizationError, CimdFetchError } from "@cloudflare/w
 import { mcpHandler } from "./mcp";
 import { changesSince, writeDoc, writeDocs, validId, COLS, type Col } from "./db";
 import { passphraseMatches, tooManyTries, noteFailure, startSession, endSession, signedIn } from "./auth";
-import { aiJson, aiChat } from "./ai";
+import { aiJson, aiChat, firstModel } from "./ai";
 import { consentPage, messagePage } from "./pages";
 
 export interface Env {
@@ -37,7 +37,7 @@ async function api(req: Request, env: Env, url: URL): Promise<Response> {
   // Changes must come from the app itself: a custom header can't be sent by another site without permission.
   if (req.method !== "GET" && req.headers.get("X-Cottage") !== "1") return json({ error: "bad_request" }, 400);
 
-  if (path === "/api/me") return json({ ok: true });
+  if (path === "/api/me") return json({ ok: true, model: firstModel(env) });   // model: which Hearth brain Munin will use, for the badge
   if (path === "/api/logout" && req.method === "POST") return json({ ok: true }, 200, { "Set-Cookie": await endSession(env, req) });
   if (path === "/api/sync" && req.method === "GET") return json(await changesSince(env.DB, Math.max(0, Number(url.searchParams.get("since")) || 0)));
   let m = path.match(/^\/api\/doc\/(items|projects|meta)\/([^/]+)$/);
@@ -54,11 +54,11 @@ async function api(req: Request, env: Env, url: URL): Promise<Response> {
   }
   if (path === "/api/ai/json" && req.method === "POST") {
     const body: any = await req.json().catch(() => ({}));
-    try { return json({ result: await aiJson(env, String(body.prompt || "")) }); } catch (e: any) { return json({ error: "ai_failed", message: String(e?.message || e) }, 502); }
+    try { return json(await aiJson(env, String(body.prompt || ""))); } catch (e: any) { return json({ error: "ai_failed", message: String(e?.message || e) }, 502); }
   }
   if (path === "/api/ai/chat" && req.method === "POST") {
     const body: any = await req.json().catch(() => ({}));
-    try { return json({ text: await aiChat(env, Array.isArray(body.messages) ? body.messages : []) }); } catch (e: any) { return json({ error: "ai_failed", message: String(e?.message || e) }, 502); }
+    try { return json(await aiChat(env, Array.isArray(body.messages) ? body.messages : [])); } catch (e: any) { return json({ error: "ai_failed", message: String(e?.message || e) }, 502); }
   }
   return json({ error: "not_found" }, 404);
 }

@@ -23,12 +23,12 @@ document.addEventListener("focusout", () => setTimeout(() => { if (S.pending && 
 function draw() {
   const notes = [];
   if (S.signin) return;
-  if (S.mode === "local") notes.push("You're not connected to your Claude account or your Cottage server here, so changes save on this device only.");
+  if (S.mode === "local") notes.push("This is a local copy of The Cottage, not your Cottage server, so changes save on this device only.");
   if (S.note) notes.push(S.note);
   $("banner").innerHTML = notes.map(n => `<div class="banner">${esc(n)}</div>`).join("");
   $("hdrSub").textContent = new Date().toLocaleDateString(undefined, { weekday: "long", month: "long", day: "numeric" });
   document.body.classList.toggle("night", isNight());
-  const ft = document.querySelector("footer"); if (ft) ft.textContent = SERVER ? "The Cottage: a little Hedgewitch home for everything you know and plan. Kept on your own Cottage server behind your passphrase, the same on every device, and Claude can read and add to it through your Cottage connector." : "The Cottage: a little Hedgewitch home for everything you know and plan. Synced through your Claude account, so it's the same on your phone and computer, and Munin (Claude) can read and add to it from any chat.";
+  const ft = document.querySelector("footer"); if (ft) ft.textContent = SERVER ? "The Cottage: a little Hedgewitch home for everything you know and plan. Kept on your own Cottage server behind your passphrase, the same on every device, and Claude can read and add to it through your Cottage connector." : "The Cottage: a little Hedgewitch home for everything you know and plan. This local copy keeps changes on this device only; open your Cottage server to sync them.";
   if (typing()) { S.pending = true; return; }
   if (!S.ready) { $("view").innerHTML = `<div class="empty" style="padding:40px;text-align:center">Lighting the lanterns...</div>`; return; }
   const r = parseRoute(S.route);
@@ -130,7 +130,7 @@ function itemHTML(it, o = {}) {
     <div class="ih" data-exp="${esc(it.id)}">${lead}<div class="t">${it.pinned ? '<span class="pin">&#9733;</span> ' : ""}${esc(it.title)}${tags}${o.where ? `<span class="where">${esc(whereText(it))}</span>` : ""}</div>${right ? `<span class="m">${esc(right)}</span>` : ""}</div>
     <div class="ib">${it.body ? `<div class="body">${md(it.body)}</div>` : ""}
       ${it.kind === "question" ? (it.answer ? `<div class="body"><b>Your answer:</b> ${esc(it.answer)}</div>` : `<form class="answer" data-answer="${esc(it.id)}"><input type="text" placeholder="Your answer..."><button type="submit">Answer</button></form>`) : ""}
-      <div class="ibm">${it.created ? "Added " + fmtDate(it.created) + (it.by === "Claude" ? ", brought by Munin from a chat" : it.by ? " by " + esc(it.by) : "") : ""} &middot; ${esc(whereText(it))}</div>
+      <div class="ibm">${it.created ? "Added " + fmtDate(it.created) + (it.by === "Claude" ? ", written by Claude in a chat" : it.by ? " by " + esc(it.by) : "") : ""} &middot; ${esc(whereText(it))}</div>
       <div class="acts">${it.link ? `<a class="play" href="${esc(safeUrl(it.link))}" target="_blank" rel="noopener">Open link</a>` : ""}
         ${it.kind === "todo" && !it.done ? `<button data-pick="${esc(it.id)}:today">${pk === "today" ? "Not today" : "Do today"}</button><button data-pick="${esc(it.id)}:week">${pk === "week" ? "Not this week" : "This week"}</button>` : ""}
         ${it.kind === "question" && !it.done ? `<button data-toggle="${esc(it.id)}">Settled</button>` : ""}
@@ -287,7 +287,7 @@ function vDoc(id) {
     <div class="grim"><div class="gh"><h2>${esc(shown ? shown.title : d.title)}</h2>${isNew(d) ? `<span class="tag new">new from Munin</span>` : ""}</div>
       ${shown ? `<div class="banner">You're reading an older version from ${fmtDate(shown.at)}. <button class="ghost" data-docver="-1">Back to the current page</button> <button data-restorever="${v}">Bring this version back</button></div>` : ""}
       <div class="doc">${mdDoc(shown ? shown.body : d.body)}</div>
-      <div class="ibm" style="margin-top:18px">${d.created ? "Written " + fmtDate(d.created) + (d.by === "Claude" ? " (brought by Munin from a chat)" : "") : ""}${d.updated ? " · updated " + fmtDate(d.updated) : ""}${d.link ? ` · <a href="${esc(safeUrl(d.link))}" target="_blank" rel="noopener" style="color:var(--lilac)">source</a>` : ""}</div>
+      <div class="ibm" style="margin-top:18px">${d.created ? "Written " + fmtDate(d.created) + (d.by === "Claude" ? " by Claude in a chat" : "") : ""}${d.updated ? " · updated " + fmtDate(d.updated) : ""}${d.link ? ` · <a href="${esc(safeUrl(d.link))}" target="_blank" rel="noopener" style="color:var(--lilac)">source</a>` : ""}</div>
       <div class="btns" style="margin-top:8px"><button class="main" data-editdoc="${esc(id)}">Edit page</button><button data-edit="${esc(id)}">Move or rename</button><button data-pin="${esc(id)}">${d.pinned ? "Unpin" : "Pin"}</button>${(d.history || []).length ? `<button data-dochist="${esc(id)}">${d.history.length} older ${d.history.length === 1 ? "version" : "versions"}</button>` : ""}<span class="spacer"></span><button class="ember" data-hex="items:${esc(id)}">Hex into firewood</button></div></div></div>`;
   S.built = "doc:" + id;
   if (isNew(d)) setTimeout(() => { const x = S.items[id]; if (x && isNew(x)) saveItem(x, { seen: true }); }, 1500);
@@ -326,14 +326,14 @@ function vBook() {
     $("runeSave").onclick = () => { const ids = inscribe($("runeIn").value); if (ids.length) { $("runeIn").value = ""; $("runeIn").blur(); S.built = "book"; renderRunes(); autoFile(ids); } };
     $("runeIn").onkeydown = e => { if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) $("runeSave").click(); };
   }
-  $("bookTips").innerHTML = SAMPLE ? (PREF.get("autofile", true) ? "Munin reads each rune as you write it. If he's sure where it belongs, he carries it there; the rest wait here with his suggestion." : "Munin reads each rune and suggests where it belongs. You can always change his mind before sending.") : S.mode === "local" ? "Munin's sorting works when The Cottage is opened from claude.ai. You can still file runes by hand." : "";
+  $("bookTips").innerHTML = MUNIN_AI ? (PREF.get("autofile", true) ? "Munin reads each rune as you write it. If he's sure where it belongs, he carries it there; the rest wait here with his suggestion." : "Munin reads each rune and suggests where it belongs. You can always change his mind before sending.") : S.mode === "local" ? "Munin's sorting works when The Cottage is opened from your Cottage server. You can still file runes by hand." : "";
   renderRunes(runes);
 }
 function renderRunes(runes = items().filter(isRune).sort(byOld)) {
   const leaf = $("runeLeaf"); if (!leaf) return;
   const sug = runes.filter(r => r.suggest);
   leaf.innerHTML = `<h3>Waiting runes <span class="sub" style="font-family:system-ui;font-size:14px">${runes.length || ""}</span></h3>
-    <div class="btns">${runes.length && SAMPLE ? `<button class="main" id="sortAll">Munin, sort these</button>` : ""}${sug.length ? `<button id="sendAll">Send ${sug.length === runes.length ? "them all" : sug.length + " sorted"}</button>` : ""}</div>
+    <div class="btns">${runes.length && MUNIN_AI ? `<button class="main" id="sortAll">Munin, sort these</button>` : ""}${sug.length ? `<button id="sendAll">Send ${sug.length === runes.length ? "them all" : sug.length + " sorted"}</button>` : ""}</div>
     <div>${runes.length ? runes.map(runeHTML).join("") : `<div class="empty" style="padding:20px 4px">No runes waiting. Every thought has a home.</div>`}</div>`;
   if ($("sortAll")) $("sortAll").onclick = sortBook;
   if ($("sendAll")) $("sendAll").onclick = () => { const list = items().filter(i => isRune(i) && i.suggest); list.forEach((l, n) => setTimeout(() => sendRune(l, l.suggest.area, l.suggest.project, l.suggest.kind, n === list.length - 1), n * 120)); };
@@ -341,8 +341,8 @@ function renderRunes(runes = items().filter(isRune).sort(byOld)) {
 function runeHTML(l) {
   const sg = l.suggest, area = sg ? sg.area : guessArea(l.title + " " + (l.body || "")), kind = sg ? sg.kind : l.kind;
   return `<div class="rune" data-rune="${esc(l.id)}"><div style="display:flex;gap:10px">${img(kind === "doc" ? "doc" : kind)}<div style="flex:1;min-width:0"><div class="t">${esc(l.title)}</div>${l.body ? `<div class="body sub">${esc(snip(l.body, 220))}</div>` : ""}
-    ${l.by === "Claude" ? `<div class="from">${img("feather")} Brought by Munin from a chat</div>` : ""}
-    ${sg ? `<div class="sug">Munin says: ${aOrAn((KINDS[sg.kind] || "note").toLowerCase())} for the ${esc((ROOMS[sg.area] || {}).name || "")}${sg.project && live(S.projects[sg.project]) ? " › " + esc(S.projects[sg.project].name) : ""}</div>` : ""}
+    ${l.by === "Claude" ? `<div class="from">${brainBadge("claude")} wrote this in a chat; Munin carried it home</div>` : ""}
+    ${sg ? `<div class="sug">${l.by === "Claude" ? "Suggested home: " : brainBadge("hearth") + " suggests: "}${aOrAn((KINDS[sg.kind] || "note").toLowerCase())} for the ${esc((ROOMS[sg.area] || {}).name || "")}${sg.project && live(S.projects[sg.project]) ? " › " + esc(S.projects[sg.project].name) : ""}</div>` : ""}
     <div class="file"><select data-fk aria-label="Kind">${Object.entries(KINDS).filter(([k]) => k !== "log").map(([k, n]) => `<option value="${k}" ${k === kind ? "selected" : ""}>${n}</option>`).join("")}</select><select data-fr aria-label="Room">${roomSelect(ROOMS[area] && area !== "book" ? area : "life")}</select><select data-fp aria-label="Project">${projSelect(ROOMS[area] && area !== "book" ? area : "life", sg ? sg.project : "")}</select>
       <button class="main" data-send="${esc(l.id)}">Send</button><button data-edit="${esc(l.id)}">Edit</button><button class="ember" data-hex="items:${esc(l.id)}" title="Hex into firewood">Hex</button></div></div></div></div>`;
 }
